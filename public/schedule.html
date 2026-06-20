@@ -467,9 +467,9 @@
     async function loadAllData() {
       try {
         const [scheduleRes, groupedRes, statsRes] = await Promise.all([
-          fetch('/api/schedule'),
-          fetch('/api/schedule/grouped'),
-          fetch('/api/schedule/stats')
+          authFetch('/api/schedule'),
+          authFetch('/api/schedule/grouped'),
+          authFetch('/api/schedule/stats')
         ]);
 
         allData = await scheduleRes.json();
@@ -750,8 +750,18 @@
       if (e.target === this) closeModal();
     });
 
-    function exportExcel() {
-      window.location.href = '/api/export';
+    async function exportExcel() {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/export', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '生产排单表.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     // P2-12: 编辑订单

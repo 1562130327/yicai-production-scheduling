@@ -5,6 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const scheduleData = require('./schedule-data');
 const dataStore = require('./models/data-store');
+const { bus, EVENTS } = require('./models/event-bus');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -176,7 +177,7 @@ if (hasDbConfig) {
   }
 
   // 排单 API
-  app.get('/api/schedule', (req, res) => {
+  app.get('/api/schedule', requireAuth, (req, res) => {
     let result = scheduleData;
     if (req.query.process_type) {
       result = result.filter(o => o.process_type === req.query.process_type);
@@ -198,7 +199,7 @@ if (hasDbConfig) {
     res.json(result);
   });
 
-  app.get('/api/schedule/stats', (req, res) => {
+  app.get('/api/schedule/stats', requireAuth, (req, res) => {
     const total = scheduleData.length;
     const urgent = scheduleData.filter(o => o.priority === '特急' || o.priority === '注意').length;
     const customers = [...new Set(scheduleData.map(o => o.customer).filter(Boolean))].length;
@@ -206,7 +207,7 @@ if (hasDbConfig) {
     res.json({ total, urgent, customers, processTypes });
   });
 
-  app.get('/api/schedule/grouped', (req, res) => {
+  app.get('/api/schedule/grouped', requireAuth, (req, res) => {
     const grouped = {};
     scheduleData.forEach(o => {
       if (o.process_type) {
@@ -220,7 +221,7 @@ if (hasDbConfig) {
     res.json(result);
   });
 
-  app.get('/api/schedule/categories', (req, res) => {
+  app.get('/api/schedule/categories', requireAuth, (req, res) => {
     res.json({
       '片材': { name: '片材', color: '#667eea', icon: '📦' },
       '切片': { name: '切片', color: '#11998e', icon: '✂️' },
@@ -284,15 +285,17 @@ if (hasDbConfig) {
     dataStore.logOperation(null, '新建订单', 'order', newId, { order_no: newOrder.order_no, customer: newOrder.customer });
     dataStore.autoSave();
 
+    bus.emit(EVENTS.ORDER_CREATED, { order: newOrder, user: req.currentUser });
+
     res.json({ success: true, message: '订单创建成功', order: newOrder });
   });
 
   // 库存 API
-  app.get('/api/inventory', (req, res) => {
+  app.get('/api/inventory', requireAuth, (req, res) => {
     res.json(dataStore.inventory);
   });
 
-  app.get('/api/inventory/stats', (req, res) => {
+  app.get('/api/inventory/stats', requireAuth, (req, res) => {
     const data = dataStore.inventory;
     const totalStock = data.reduce((sum, item) => sum + (item.remaining_stock || 0), 0);
     const materials = new Set(data.map(item => item.material));
@@ -315,17 +318,17 @@ if (hasDbConfig) {
   let feedbacksData = dataStore.feedbacks;
 
   // 师傅 API
-  app.get('/api/workers', (req, res) => {
+  app.get('/api/workers', requireAuth, (req, res) => {
     res.json(workersData);
   });
 
-  app.get('/api/workers/:id', (req, res) => {
+  app.get('/api/workers/:id', requireAuth, (req, res) => {
     const worker = workersData.find(w => w.id == req.params.id);
     if (!worker) return res.status(404).json({ error: '师傅不存在' });
     res.json(worker);
   });
 
-  app.post('/api/workers', (req, res) => {
+  app.post('/api/workers', requireAuth, (req, res) => {
     const newWorker = { id: workersData.length + 1, ...req.body };
     workersData.push(newWorker);
     res.json({ id: newWorker.id, message: '添加成功' });
@@ -333,18 +336,18 @@ if (hasDbConfig) {
   });
 
   // 机器 API
-  app.get('/api/machines', (req, res) => {
+  app.get('/api/machines', requireAuth, (req, res) => {
     res.json(machinesData);
   });
 
-  app.get('/api/machines/:id', (req, res) => {
+  app.get('/api/machines/:id', requireAuth, (req, res) => {
     const machine = machinesData.find(m => m.id == req.params.id);
     if (!machine) return res.status(404).json({ error: '机器不存在' });
     res.json(machine);
   });
 
   // 反馈 API
-  app.get('/api/feedbacks', (req, res) => {
+  app.get('/api/feedbacks', requireAuth, (req, res) => {
     let result = feedbacksData;
     if (req.query.status) {
       result = result.filter(f => f.status === req.query.status);
@@ -355,7 +358,7 @@ if (hasDbConfig) {
     res.json(result);
   });
 
-  app.post('/api/feedbacks', (req, res) => {
+  app.post('/api/feedbacks', requireAuth, (req, res) => {
     const { order_id, from_worker_id, type, content, step_name } = req.body;
 
     // 确定反馈接收人
@@ -390,6 +393,8 @@ if (hasDbConfig) {
     };
 
     feedbacksData.push(newFeedback);
+
+    bus.emit(EVENTS.FEEDBACK_SUBMITTED, { feedback: newFeedback });
 
     // P0-4: 反馈联动 - 暂停相关工序，通知相关人员
     if (order_id) {
@@ -426,7 +431,7 @@ if (hasDbConfig) {
     res.json({ id: newFeedback.id, message: '反馈提交成功', to_worker: toWorker });
   });
 
-  app.put('/api/feedbacks/:id', (req, res) => {
+  app.put('/api/feedbacks/:id', requireAuth, (req, res) => {
     const feedback = feedbacksData.find(f => f.id == req.params.id);
     if (!feedback) return res.status(404).json({ error: '反馈不存在' });
     Object.assign(feedback, req.body);
@@ -623,7 +628,7 @@ if (hasDbConfig) {
   });
 
   // 日报 API (P1-7: 使用真实数据)
-  app.get('/api/daily-report', (req, res) => {
+  app.get('/api/daily-report', requireAuth, (req, res) => {
     const date = req.query.date || new Date().toISOString().split('T')[0];
 
     // 统计订单
@@ -723,6 +728,8 @@ if (hasDbConfig) {
       steps: newAssignments.length
     });
 
+    bus.emit(EVENTS.ORDER_ASSIGNED, { orderId, processType, steps: newAssignments.length });
+
     res.json({
       success: true, order_id: orderId, process_type: processType,
       total_steps: newAssignments.length,
@@ -788,28 +795,28 @@ if (hasDbConfig) {
   });
 
   // 获取分配给某个师傅的任务
-  app.get('/api/agent/assignments/:workerName', (req, res) => {
+  app.get('/api/agent/assignments/:workerName', requireAuth, (req, res) => {
     const workerName = decodeURIComponent(req.params.workerName);
     const tasks = dataStore.assignments.filter(a => a.worker === workerName);
     res.json(tasks);
   });
 
   // 获取所有分配结果
-  app.get('/api/agent/assignments', (req, res) => {
+  app.get('/api/agent/assignments', requireAuth, (req, res) => {
     res.json(dataStore.assignments);
   });
 
-  app.get('/api/agent/workflow/:processType', (req, res) => {
+  app.get('/api/agent/workflow/:processType', requireAuth, (req, res) => {
     const workflow = WORKFLOW_MAP[req.params.processType];
     if (!workflow) return res.status(404).json({ error: '未知的加工工艺' });
     res.json(workflow);
   });
 
-  app.get('/api/agent/workflows', (req, res) => {
+  app.get('/api/agent/workflows', requireAuth, (req, res) => {
     res.json(WORKFLOW_MAP);
   });
 
-  app.get('/api/agent/workload', (req, res) => {
+  app.get('/api/agent/workload', requireAuth, (req, res) => {
     // 从分配数据中计算每个师傅的工作量
     const workload = {};
     dataStore.workers.filter(w => w.role === '师傅').forEach(w => {
@@ -826,7 +833,7 @@ if (hasDbConfig) {
     res.json(Object.values(workload));
   });
 
-  app.get('/api/agent/print/:workerName', (req, res) => {
+  app.get('/api/agent/print/:workerName', requireAuth, (req, res) => {
     const workerName = decodeURIComponent(req.params.workerName);
     const tasks = dataStore.assignments.filter(a => a.worker === workerName);
 
@@ -958,6 +965,8 @@ if (hasDbConfig) {
       order_status: newOrderStatus
     });
 
+    bus.emit(EVENTS.STEP_STARTED, { assignment, user: req.currentUser });
+
     res.json({ success: true, message: '工序开始', assignment, order_status: newOrderStatus });
     dataStore.autoSave();
   });
@@ -1006,6 +1015,12 @@ if (hasDbConfig) {
 
     // 自动推导订单状态
     const newOrderStatus = dataStore.syncOrderStatus(assignment.order_id, userId);
+
+    bus.emit(EVENTS.STEP_COMPLETED, { assignment, nextWorker, orderStatus: newOrderStatus });
+    // If order is completed, also emit ORDER_COMPLETED
+    if (newOrderStatus === '已完成') {
+      bus.emit(EVENTS.ORDER_COMPLETED, { orderId: assignment.order_id });
+    }
 
     res.json({
       success: true,
@@ -1065,7 +1080,7 @@ if (hasDbConfig) {
   });
 
   // 检查订单是否可以完单
-  app.get('/api/agent/check-complete/:orderId', (req, res) => {
+  app.get('/api/agent/check-complete/:orderId', requireAuth, (req, res) => {
     const orderId = parseInt(req.params.orderId);
     const orderAssignments = dataStore.assignments.filter(a => a.order_id === orderId);
     const allCompleted = orderAssignments.length > 0 && orderAssignments.every(a => a.status === '已完成');
@@ -1079,7 +1094,7 @@ if (hasDbConfig) {
   });
 
   // 获取订单的分配进度
-  app.get('/api/agent/order-progress/:orderId', (req, res) => {
+  app.get('/api/agent/order-progress/:orderId', requireAuth, (req, res) => {
     const orderId = parseInt(req.params.orderId);
     const orderAssignments = dataStore.assignments
       .filter(a => a.order_id === orderId)
@@ -1091,25 +1106,31 @@ if (hasDbConfig) {
   // ============================================
   // 库存 API
   // ============================================
-  app.post('/api/inventory/issue', (req, res) => {
+  app.post('/api/inventory/issue', requireAuth, requireRole('管理员'), (req, res) => {
     const { orderId, materialName, quantity, userId } = req.body;
     const result = dataStore.issueMaterial(orderId, materialName, quantity, userId);
+    if (result.success) {
+      bus.emit(EVENTS.STOCK_ISSUED, { orderId, materialName, quantity });
+    }
     res.json(result);
   });
 
-  app.post('/api/inventory/inbound', (req, res) => {
+  app.post('/api/inventory/inbound', requireAuth, requireRole('管理员'), (req, res) => {
     const { materialName, quantity, userId } = req.body;
     const result = dataStore.inboundMaterial(materialName, quantity, userId);
+    if (result.success) {
+      bus.emit(EVENTS.STOCK_INBOUND, { materialName, quantity });
+    }
     res.json(result);
   });
 
-  app.get('/api/inventory/alerts', (req, res) => {
+  app.get('/api/inventory/alerts', requireAuth, (req, res) => {
     const alerts = dataStore.checkInventoryAlerts();
     res.json(alerts);
   });
 
   // 订单领料（自动扣减库存）
-  app.post('/api/inventory/issue-for-order', (req, res) => {
+  app.post('/api/inventory/issue-for-order', requireAuth, requireRole('管理员'), (req, res) => {
     const { orderId, userId } = req.body;
 
     // 查找订单
@@ -1140,7 +1161,7 @@ if (hasDbConfig) {
   // ============================================
   // 提醒 API
   // ============================================
-  app.get('/api/alerts', (req, res) => {
+  app.get('/api/alerts', requireAuth, (req, res) => {
     const inventoryAlerts = dataStore.checkInventoryAlerts();
     const dueDateAlerts = dataStore.checkDueDateAlerts();
 
@@ -1154,7 +1175,7 @@ if (hasDbConfig) {
   // ============================================
   // 操作日志 API
   // ============================================
-  app.get('/api/logs', (req, res) => {
+  app.get('/api/logs', requireAuth, requireRole('管理员'), (req, res) => {
     const { action, targetType, limit } = req.query;
     let logs = [...dataStore.operationLogs];
 
@@ -1169,7 +1190,7 @@ if (hasDbConfig) {
   });
 
   // 获取订单操作历史
-  app.get('/api/logs/order/:orderId', (req, res) => {
+  app.get('/api/logs/order/:orderId', requireAuth, requireRole('管理员'), (req, res) => {
     const orderId = parseInt(req.params.orderId);
     const logs = dataStore.operationLogs
       .filter(l => l.target_type === 'order' && l.target_id === orderId)
@@ -1178,7 +1199,7 @@ if (hasDbConfig) {
   });
 
   // 获取师傅操作历史
-  app.get('/api/logs/worker/:workerId', (req, res) => {
+  app.get('/api/logs/worker/:workerId', requireAuth, requireRole('管理员'), (req, res) => {
     const workerId = parseInt(req.params.workerId);
     const logs = dataStore.operationLogs
       .filter(l => l.user_id === workerId)
@@ -1187,7 +1208,7 @@ if (hasDbConfig) {
   });
 
   // 获取订单状态历史
-  app.get('/api/order-status-history/:orderId', (req, res) => {
+  app.get('/api/order-status-history/:orderId', requireAuth, (req, res) => {
     const orderId = parseInt(req.params.orderId);
     const history = dataStore.orderStatusHistory
       .filter(h => h.order_id === orderId)
@@ -1202,19 +1223,19 @@ if (hasDbConfig) {
   if (!dataStore.samples) dataStore.samples = [];
 
   // 获取所有样板
-  app.get('/api/samples', (req, res) => {
+  app.get('/api/samples', requireAuth, (req, res) => {
     res.json(dataStore.samples);
   });
 
   // 获取单个样板
-  app.get('/api/samples/:id', (req, res) => {
+  app.get('/api/samples/:id', requireAuth, (req, res) => {
     const sample = dataStore.samples.find(s => s.id === req.params.id);
     if (!sample) return res.status(404).json({ success: false, error: '样板不存在' });
     res.json(sample);
   });
 
   // 创建样板
-  app.post('/api/samples', (req, res) => {
+  app.post('/api/samples', requireAuth, (req, res) => {
     const sample = {
       id: dataStore.generateId(),
       ...req.body,
@@ -1227,7 +1248,7 @@ if (hasDbConfig) {
   });
 
   // 更新样板
-  app.put('/api/samples/:id', (req, res) => {
+  app.put('/api/samples/:id', requireAuth, (req, res) => {
     const index = dataStore.samples.findIndex(s => s.id === req.params.id);
     if (index === -1) return res.status(404).json({ success: false, error: '样板不存在' });
     dataStore.samples[index] = { ...dataStore.samples[index], ...req.body, updated_at: new Date().toISOString() };
@@ -1236,7 +1257,7 @@ if (hasDbConfig) {
   });
 
   // 更新样板状态
-  app.put('/api/samples/:id/status', (req, res) => {
+  app.put('/api/samples/:id/status', requireAuth, (req, res) => {
     const sample = dataStore.samples.find(s => s.id === req.params.id);
     if (!sample) return res.status(404).json({ success: false, error: '样板不存在' });
     sample.status = req.body.status;
@@ -1247,7 +1268,7 @@ if (hasDbConfig) {
   });
 
   // 删除样板
-  app.delete('/api/samples/:id', (req, res) => {
+  app.delete('/api/samples/:id', requireAuth, requireRole('管理员'), (req, res) => {
     dataStore.samples = dataStore.samples.filter(s => s.id !== req.params.id);
     res.json({ success: true });
     dataStore.autoSave();
@@ -1276,19 +1297,19 @@ if (hasDbConfig) {
   }
 
   // 获取所有客户
-  app.get('/api/customers', (req, res) => {
+  app.get('/api/customers', requireAuth, (req, res) => {
     res.json(dataStore.customers);
   });
 
   // 获取单个客户
-  app.get('/api/customers/:id', (req, res) => {
+  app.get('/api/customers/:id', requireAuth, (req, res) => {
     const customer = dataStore.customers.find(c => c.id === req.params.id);
     if (!customer) return res.status(404).json({ success: false, error: '客户不存在' });
     res.json(customer);
   });
 
   // 创建客户
-  app.post('/api/customers', (req, res) => {
+  app.post('/api/customers', requireAuth, (req, res) => {
     const customer = {
       id: dataStore.generateId(),
       ...req.body,
@@ -1302,7 +1323,7 @@ if (hasDbConfig) {
   });
 
   // 更新客户
-  app.put('/api/customers/:id', (req, res) => {
+  app.put('/api/customers/:id', requireAuth, (req, res) => {
     const index = dataStore.customers.findIndex(c => c.id === req.params.id);
     if (index === -1) return res.status(404).json({ success: false, error: '客户不存在' });
     dataStore.customers[index] = { ...dataStore.customers[index], ...req.body, updated_at: new Date().toISOString() };
@@ -1311,7 +1332,7 @@ if (hasDbConfig) {
   });
 
   // 删除客户
-  app.delete('/api/customers/:id', (req, res) => {
+  app.delete('/api/customers/:id', requireAuth, requireRole('管理员'), (req, res) => {
     dataStore.customers = dataStore.customers.filter(c => c.id !== req.params.id);
     res.json({ success: true });
     dataStore.autoSave();
@@ -1320,7 +1341,7 @@ if (hasDbConfig) {
   // ============================================
   // Excel 导出 API (P1-8)
   // ============================================
-  app.get('/api/export', (req, res) => {
+  app.get('/api/export', requireAuth, (req, res) => {
     try {
       const XLSX = require('xlsx');
 
@@ -1381,6 +1402,23 @@ app.listen(PORT, () => {
   console.log('  - 库存管理: http://localhost:' + PORT + '/inventory.html');
   console.log('  - 工人派单: http://localhost:' + PORT + '/worker-sheet.html');
   console.log('\n💡 提示: 配置 .env 文件可启用数据库功能');
+});
+
+// 事件监听：记录所有 MES 事件到操作日志
+bus.on(EVENTS.STEP_COMPLETED, (data) => {
+  console.log('📢 [事件] 工序完成:', data.assignment?.step_name, '→ 通知:', data.nextWorker || '无');
+});
+
+bus.on(EVENTS.ORDER_COMPLETED, (data) => {
+  console.log('🎉 [事件] 订单完成:', data.orderId);
+});
+
+bus.on(EVENTS.FEEDBACK_SUBMITTED, (data) => {
+  console.log('⚠️ [事件] 新反馈:', data.feedback?.type, '-', data.feedback?.content);
+});
+
+bus.on(EVENTS.STOCK_LOW, (data) => {
+  console.log('📊 [事件] 库存预警:', data.message);
 });
 
 module.exports = app;
