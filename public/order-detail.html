@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>订单详情 - 溢彩包装</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 { font-size: 18px; color: #333; }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn-secondary { background: #f0f0f0; color: #333; }
+    .btn-primary { background: #667eea; color: white; }
+
+    .content { padding: 20px; max-width: 1000px; margin: 0 auto; }
+
+    .detail-section {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+    }
+
+    .info-item {
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+
+    .info-item label {
+      display: block;
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 5px;
+    }
+
+    .info-item .value {
+      font-size: 14px;
+      color: #333;
+      font-weight: 500;
+    }
+
+    .info-item.full-width {
+      grid-column: span 3;
+    }
+
+    .info-item.highlight {
+      background: #e3f2fd;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .tag-特急 { background: #f8d7da; color: #721c24; }
+    .tag-注意 { background: #fff3cd; color: #856404; }
+    .tag-普通 { background: #d1ecf1; color: #0c5460; }
+    .tag-低 { background: #e2e3e5; color: #383d41; }
+    .tag-待分配 { background: #e3f2fd; color: #1976d2; }
+    .tag-已分配 { background: #fff3cd; color: #856404; }
+    .tag-待排产 { background: #e3f2fd; color: #1976d2; }
+    .tag-生产中 { background: #fff3cd; color: #856404; }
+    .tag-已完成 { background: #d4edda; color: #155724; }
+
+    /* 生产流程 */
+    .workflow-timeline {
+      position: relative;
+      padding-left: 30px;
+    }
+
+    .workflow-timeline::before {
+      content: '';
+      position: absolute;
+      left: 10px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: #ddd;
+    }
+
+    .workflow-step {
+      position: relative;
+      margin-bottom: 15px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+
+    .workflow-step::before {
+      content: '';
+      position: absolute;
+      left: -25px;
+      top: 20px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ddd;
+      border: 2px solid white;
+    }
+
+    .workflow-step.current::before { background: #667eea; }
+    .workflow-step.completed::before { background: #27ae60; }
+
+    .step-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .step-name { font-weight: 600; color: #333; }
+    .step-worker { font-size: 13px; color: #666; }
+
+    .step-info {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .step-info span { display: inline-block; margin-right: 15px; }
+
+    /* 操作按钮 */
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+      .info-grid { grid-template-columns: repeat(2, 1fr); }
+      .info-item.full-width { grid-column: span 2; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>订单详情</h1>
+    <div>
+      <button class="btn btn-secondary" onclick="window.history.back()">返回</button>
+    </div>
+  </div>
+
+  <div class="content" id="orderContent">
+    <div style="text-align: center; color: #999; padding: 40px;">加载中...</div>
+  </div>
+
+  <script>
+    let orderId = null;
+    let orderData = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const params = new URLSearchParams(window.location.search);
+      orderId = params.get('id');
+
+      if (orderId) {
+        loadOrderDetail(orderId);
+      } else {
+        // 从 localStorage 获取
+        const lastOrder = localStorage.getItem('lastViewOrder');
+        if (lastOrder) {
+          orderData = JSON.parse(lastOrder);
+          renderOrderDetail();
+        }
+      }
+    });
+
+    async function loadOrderDetail(id) {
+      try {
+        // 从本地数据中查找
+        const response = await fetch('/api/schedule');
+        const allOrders = await response.json();
+        orderData = allOrders.find(o => o.id == id);
+
+        if (orderData) {
+          renderOrderDetail();
+        } else {
+          document.getElementById('orderContent').innerHTML = '<div style="text-align: center; color: #999; padding: 40px;">订单不存在</div>';
+        }
+      } catch (error) {
+        console.error('加载订单详情失败:', error);
+      }
+    }
+
+    function renderOrderDetail() {
+      if (!orderData) return;
+
+      // 根据工艺生成流程步骤
+      const workflowSteps = generateWorkflow(orderData.process_type);
+
+      const html = `
+        <!-- 基本信息 -->
+        <div class="detail-section">
+          <div class="section-title">基本信息</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>订单编号</label>
+              <div class="value">${orderData.order_no || '-'}</div>
+            </div>
+            <div class="info-item">
+              <label>款号</label>
+              <div class="value">${orderData.style_no || '-'}</div>
+            </div>
+            <div class="info-item">
+              <label>客户名称</label>
+              <div class="value">${orderData.customer || '-'}</div>
+            </div>
+            <div class="info-item">
+              <label>加工工艺</label>
+              <div class="value">${orderData.process_type || '-'}</div>
+            </div>
+            <div class="info-item">
+              <label>类别</label>
+              <div class="value">${orderData.category || '-'}</div>
+            </div>
+            <div class="info-item">
+              <label>优先级</label>
+              <div class="value"><span class="tag tag-${orderData.priority || '普通'}">${orderData.priority || '普通'}</span></div>
+            </div>
+            <div class="info-item">
+              <label>订单状态</label>
+              <div class="value"><span class="tag tag-${orderData.status || '待分配'}">${orderData.status || '待分配'}</span></div>
+            </div>
+            <div class="info-item">
+              <label>下单日期</label>
+              <div class="value">${orderData.order_date || '-'}</div>
+            </div>
+            <div class="info-item">
+              <label>备注</label>
+              <div class="value">${orderData.remark || '-'}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 用料信息 -->
+        <div class="detail-section">
+          <div class="section-title">用料信息</div>
+          <div class="info-grid">
+            <div class="info-item full-width highlight">
+              <label>用料</label>
+              <div class="value" style="font-size: 16px;">${orderData.material || '-'}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 片材工序 -->
+        <div class="detail-section">
+          <div class="section-title">片材工序（开片）</div>
+          <div class="info-grid">
+            <div class="info-item highlight">
+              <label>片材尺寸（破片师傅要破的尺寸）</label>
+              <div class="value" style="font-size: 16px;">${orderData.sheet_size || '-'}</div>
+            </div>
+            <div class="info-item">
+              <label>片材数量</label>
+              <div class="value" style="font-size: 16px;">${orderData.sheet_qty || '-'}</div>
+            </div>
+            <div class="info-item">
+              <label>已开片材</label>
+              <div class="value" style="font-size: 16px;">${orderData.sheet_done || '-'}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 切片工序 -->
+        ${orderData.slice_size || orderData.slice_qty ? `
+        <div class="detail-section">
+          <div class="section-title">切片工序</div>
+          <div class="info-grid">
+            <div class="info-item highlight">
+              <label>切片尺寸</label>
+              <div class="value" style="font-size: 16px;">${orderData.slice_size || '-'}</div>
+            </div>
+            <div class="info-item">
+              <label>切片数量</label>
+              <div class="value" style="font-size: 16px;">${orderData.slice_qty || '-'}</div>
+            </div>
+            <div class="info-item">
+              <label>已切片</label>
+              <div class="value" style="font-size: 16px;">${orderData.slice_done || '-'}</div>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- 冲型工序 -->
+        ${orderData.punch_process || orderData.punch_size || orderData.punch_qty ? `
+        <div class="detail-section">
+          <div class="section-title">冲型工序</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>冲型工艺</label>
+              <div class="value">${orderData.punch_process || '-'}</div>
+            </div>
+            <div class="info-item highlight">
+              <label>冲型后尺寸</label>
+              <div class="value" style="font-size: 16px;">${orderData.punch_size || '-'}</div>
+            </div>
+            <div class="info-item">
+              <label>冲型数量</label>
+              <div class="value" style="font-size: 16px;">${orderData.punch_qty || '-'}</div>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- 生产流程 -->
+        <div class="detail-section">
+          <div class="section-title">生产流程</div>
+          <div class="workflow-timeline">
+            ${workflowSteps.map((step, index) => `
+              <div class="workflow-step ${index === 0 ? 'current' : ''}">
+                <div class="step-header">
+                  <span class="step-name">${step.name}</span>
+                  <span class="step-worker">${step.worker}</span>
+                </div>
+                <div class="step-info">
+                  <span>机器: ${step.machine}</span>
+                  <span>状态: ${index === 0 ? '进行中' : '待开始'}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="detail-section">
+          <div class="action-buttons">
+            <button class="btn btn-primary" onclick="printOrder()">打印任务单</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('orderContent').innerHTML = html;
+    }
+
+    function generateWorkflow(processType) {
+      const workflowMap = {
+        '片材': [
+          { name: '横竖分切机', worker: '郑思远', machine: '横竖分切机' },
+          { name: '破片机', worker: '伍乾进', machine: '破片机' }
+        ],
+        '片材切片': [
+          { name: '横竖分切机', worker: '郑思远', machine: '横竖分切机' },
+          { name: '破片机', worker: '伍乾进', machine: '破片机' },
+          { name: '直切机', worker: '老莫', machine: '直切机' }
+        ],
+        '片材冲型': [
+          { name: '横竖分切机', worker: '郑思远', machine: '横竖分切机' },
+          { name: '破片机', worker: '伍乾进', machine: '破片机' },
+          { name: '冲床', worker: '李乐', machine: '冲床' }
+        ],
+        '片材切片冲型': [
+          { name: '横竖分切机', worker: '郑思远', machine: '横竖分切机' },
+          { name: '破片机', worker: '伍乾进', machine: '破片机' },
+          { name: '直切机', worker: '老莫', machine: '直切机' },
+          { name: '冲床', worker: '李乐', machine: '冲床' }
+        ],
+        '切片冲型': [
+          { name: '直切机', worker: '老莫', machine: '直切机' },
+          { name: '冲床', worker: '李乐', machine: '冲床' }
+        ],
+        '片材背胶冲型': [
+          { name: '横竖分切机', worker: '郑思远', machine: '横竖分切机' },
+          { name: '破片机', worker: '伍乾进', machine: '破片机' },
+          { name: '冲床', worker: '李乐', machine: '冲床' },
+          { name: '热熔胶机', worker: '老莫老婆', machine: '热熔胶机' }
+        ],
+        '片材背胶切片冲型': [
+          { name: '横竖分切机', worker: '郑思远', machine: '横竖分切机' },
+          { name: '破片机', worker: '伍乾进', machine: '破片机' },
+          { name: '直切机', worker: '老莫', machine: '直切机' },
+          { name: '冲床', worker: '李乐', machine: '冲床' },
+          { name: '热熔胶机', worker: '老莫老婆', machine: '热熔胶机' }
+        ],
+        '片材贴布切片冲型': [
+          { name: '横竖分切机', worker: '郑思远', machine: '横竖分切机' },
+          { name: '破片机', worker: '伍乾进', machine: '破片机' },
+          { name: '贴布', worker: '外发加工', machine: '-' },
+          { name: '直切机', worker: '老莫', machine: '直切机' },
+          { name: '冲床', worker: '李乐', machine: '冲床' }
+        ],
+        '库存冲型': [
+          { name: '冲床', worker: '李乐', machine: '冲床' }
+        ],
+        '库存切片冲型': [
+          { name: '直切机', worker: '老莫', machine: '直切机' },
+          { name: '冲床', worker: '李乐', machine: '冲床' }
+        ],
+        '库存切片': [
+          { name: '直切机', worker: '老莫', machine: '直切机' }
+        ],
+        '库存片材': [
+          { name: '直接出库', worker: '-', machine: '-' }
+        ]
+      };
+
+      return workflowMap[processType] || [
+        { name: '待分配', worker: '-', machine: '-' }
+      ];
+    }
+
+    function printOrder() {
+      window.print();
+    }
+  </script>
+</body>
+</html>

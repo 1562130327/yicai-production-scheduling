@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - 溢彩包装</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-container {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      width: 400px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .login-title {
+      text-align: center;
+      font-size: 24px;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .login-subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .role-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .role-tab {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+    }
+
+    .role-tab:hover { border-color: #667eea; }
+    .role-tab.active { background: #667eea; color: white; border-color: #667eea; }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #333;
+    }
+
+    .form-group select, .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .form-group select:focus, .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .login-btn:hover { background: #5a6fd6; }
+
+    .demo-hint {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .demo-hint b { color: #333; }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-title">溢彩包装</div>
+    <div class="login-subtitle">生产排单管理系统</div>
+
+    <div class="role-tabs">
+      <div class="role-tab active" onclick="selectRole('师傅')">师傅</div>
+      <div class="role-tab" onclick="selectRole('跟单员')">跟单员</div>
+      <div class="role-tab" onclick="selectRole('管理员')">管理员</div>
+    </div>
+
+    <form id="loginForm">
+      <div class="form-group" id="workerGroup">
+        <label>选择师傅</label>
+        <select id="workerSelect">
+          <option value="">请选择...</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="nameGroup" style="display:none;">
+        <label>输入姓名</label>
+        <input type="text" id="nameInput" placeholder="请输入您的姓名">
+      </div>
+
+      <button type="submit" class="login-btn">进入系统</button>
+    </form>
+
+    <div class="demo-hint">
+      <b>演示账号：</b><br>
+      师傅：郑思远、伍乾进、莫齐国、李乐、简翠花、杨合进<br>
+      跟单员：罗巧芳、曾小芳、彭鸿媛<br>
+      管理员：潘光龙、潘朝森
+    </div>
+  </div>
+
+  <script>
+    let currentRole = '师傅';
+    let workers = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadWorkers();
+    });
+
+    async function loadWorkers() {
+      try {
+        const response = await fetch('/api/workers');
+        workers = await response.json();
+        renderWorkerSelect();
+      } catch (error) {
+        console.error('加载师傅列表失败:', error);
+      }
+    }
+
+    function renderWorkerSelect() {
+      const select = document.getElementById('workerSelect');
+      select.innerHTML = '<option value="">请选择...</option>';
+      workers.forEach(w => {
+        select.innerHTML += `<option value="${w.id}">${w.name}</option>`;
+      });
+    }
+
+    function selectRole(role) {
+      currentRole = role;
+      document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      document.getElementById('workerGroup').style.display = role === '师傅' ? 'block' : 'none';
+      document.getElementById('nameGroup').style.display = role !== '师傅' ? 'block' : 'none';
+    }
+
+    document.getElementById('loginForm').onsubmit = async function(e) {
+      e.preventDefault();
+
+      let user = null;
+
+      if (currentRole === '师傅') {
+        const workerId = document.getElementById('workerSelect').value;
+        if (!workerId) {
+          alert('请选择师傅');
+          return;
+        }
+        user = workers.find(w => w.id == workerId);
+      } else {
+        const name = document.getElementById('nameInput').value.trim();
+        if (!name) {
+          alert('请输入姓名');
+          return;
+        }
+        user = { name: name, role: currentRole };
+      }
+
+      // 调用登录 API 获取 token
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: user.name, role: currentRole })
+        });
+        const result = await response.json();
+        if (result.success) {
+          localStorage.setItem('authToken', result.token);
+          localStorage.setItem('currentUser', JSON.stringify({
+            ...user,
+            role: currentRole
+          }));
+        } else {
+          alert('登录失败: ' + (result.error || '未知错误'));
+          return;
+        }
+      } catch (error) {
+        alert('登录失败: ' + error.message);
+        return;
+      }
+
+      // 根据角色跳转
+      if (currentRole === '师傅') {
+        window.location.href = 'worker-dashboard.html';
+      } else if (currentRole === '跟单员') {
+        window.location.href = 'merchandiser-dashboard.html';
+      } else {
+        window.location.href = 'admin.html';
+      }
+    };
+  </script>
+</body>
+</html>

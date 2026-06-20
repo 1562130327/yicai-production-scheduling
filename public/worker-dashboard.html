@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>师傅工作台 - 溢彩包装</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .header-left h1 { font-size: 18px; color: #333; }
+    .worker-name { color: #667eea; font-weight: 500; }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary { background: #667eea; color: white; }
+    .btn-secondary { background: #f0f0f0; color: #333; }
+    .btn-success { background: #27ae60; color: white; }
+    .btn-danger { background: #e74c3c; color: white; }
+
+    .content { padding: 20px; }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      border: none;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .tab:hover { background: #e3f2fd; }
+    .tab.active { background: #667eea; color: white; }
+
+    /* 统计卡片 */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .stat-card h3 { color: #666; font-size: 12px; margin-bottom: 5px; }
+    .stat-card .value { font-size: 24px; font-weight: bold; color: #667eea; }
+
+    .task-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      border-left: 4px solid #667eea;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .task-card:hover { box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .task-card.priority-特急 { border-left-color: #e74c3c; }
+    .task-card.priority-注意 { border-left-color: #f39c12; }
+
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .task-customer { font-size: 18px; font-weight: 600; color: #333; }
+
+    .task-info {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .task-info span { display: block; }
+    .task-info b { color: #333; }
+
+    /* 流程步骤 */
+    .workflow-steps {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid #eee;
+    }
+
+    .workflow-steps h4 {
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .step-item.current { background: #e3f2fd; border: 1px solid #667eea; }
+    .step-item.completed { background: #d4edda; }
+
+    .step-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ddd;
+    }
+
+    .step-item.completed .step-dot { background: #27ae60; }
+    .step-item.current .step-dot { background: #667eea; }
+
+    .step-info { flex: 1; }
+    .step-worker { font-size: 12px; color: #999; }
+
+    /* 任务操作 */
+    .task-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .task-actions .btn { flex: 1; }
+
+    /* 零工信息 */
+    .casual-info {
+      display: flex;
+      gap: 15px;
+      margin-top: 10px;
+      padding: 10px;
+      background: #fff3cd;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    .casual-info span { color: #856404; }
+
+    .empty-tip {
+      text-align: center;
+      color: #999;
+      padding: 40px;
+      background: white;
+      border-radius: 10px;
+    }
+
+    /* 模态框 */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active { display: flex; }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      width: 450px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-body { padding: 20px; }
+
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .task-info { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <h1>师傅工作台</h1>
+      <span class="worker-name" id="workerName">--</span>
+    </div>
+    <div>
+      <a href="index.html" class="btn btn-secondary">主页</a>
+      <a href="print-tasks.html" class="btn btn-secondary">打印任务单</a>
+      <button class="btn btn-secondary" onclick="showFeedbackModal()">提交反馈</button>
+      <button class="btn btn-secondary" onclick="showCalculator()">材料计算</button>
+      <button class="btn btn-secondary" onclick="logout()">退出登录</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- 统计 -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <h3>待完成任务</h3>
+        <div class="value" id="pendingCount">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>进行中任务</h3>
+        <div class="value" id="inProgressCount" style="color: #f39c12;">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>已完成任务</h3>
+        <div class="value" id="completedCount" style="color: #27ae60;">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>今日零工</h3>
+        <div class="value" id="casualCount">0</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('pending')">待完成任务</button>
+      <button class="tab" onclick="switchTab('in_progress')">进行中任务</button>
+      <button class="tab" onclick="switchTab('completed')">已完成任务</button>
+    </div>
+
+    <div id="taskList"></div>
+  </div>
+
+  <!-- 完成任务模态框 -->
+  <div class="modal" id="completeModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>完成任务</h2>
+        <button class="btn" onclick="closeModal('completeModal')" style="background:none;font-size:24px;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="completeForm">
+          <input type="hidden" id="completeProgressId">
+          <div class="form-group">
+            <label>完成数量</label>
+            <input type="number" id="completeQty" required min="0" step="0.01" placeholder="请输入完成数量">
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('completeModal')">取消</button>
+            <button type="submit" class="btn btn-success">确认完成</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 反馈模态框 -->
+  <div class="modal" id="feedbackModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>提交反馈</h2>
+        <button class="btn" onclick="closeModal('feedbackModal')" style="background:none;font-size:24px;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="feedbackForm">
+          <div class="form-group">
+            <label>关联订单</label>
+            <select id="feedbackOrder">
+              <option value="">无（通用反馈）</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>反馈类型 *</label>
+            <select id="feedbackType" required>
+              <option value="">请选择</option>
+              <option value="数量问题">数量问题</option>
+              <option value="材料问题">材料问题</option>
+              <option value="人员不足">人员不足</option>
+              <option value="机器故障">机器故障</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>反馈内容 *</label>
+            <textarea id="feedbackContent" rows="4" required placeholder="请详细描述问题..."></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('feedbackModal')">取消</button>
+            <button type="submit" class="btn btn-primary">提交反馈</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 订单详情模态框 -->
+  <div class="modal" id="orderDetailModal">
+    <div class="modal-content" style="width: 600px;">
+      <div class="modal-header">
+        <h2>订单详情</h2>
+        <button class="btn" onclick="closeModal('orderDetailModal')" style="background:none;font-size:24px;">&times;</button>
+      </div>
+      <div class="modal-body" id="orderDetailContent"></div>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let tasks = [];
+    let currentTab = 'pending';
+
+    document.addEventListener('DOMContentLoaded', function() {
+      checkLogin();
+      loadTasks();
+    });
+
+    function checkLogin() {
+      const userStr = localStorage.getItem('currentUser');
+      if (!userStr) {
+        window.location.href = 'login.html';
+        return;
+      }
+      currentUser = JSON.parse(userStr);
+      document.getElementById('workerName').textContent = currentUser.name;
+    }
+
+    // 获取带认证的请求头
+    function getToken() {
+      return localStorage.getItem('authToken') || '';
+    }
+
+    function getAuthHeaders() {
+      const token = getToken();
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+      }
+      return headers;
+    }
+
+    function logout() {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('authToken');
+      window.location.href = 'login.html';
+    }
+
+    async function loadTasks() {
+      try {
+        const workerName = currentUser.name;
+
+        // 优先从智能分配结果中获取任务
+        try {
+          const assignResponse = await fetch(`/api/agent/assignments/${encodeURIComponent(workerName)}`, {
+            headers: getAuthHeaders()
+          });
+          const assignedTasks = await assignResponse.json();
+
+          if (assignedTasks && assignedTasks.length > 0) {
+            // 使用智能分配的任务
+            tasks = assignedTasks.map(t => ({
+              id: t.id,  // 使用分配记录ID，不是订单ID
+              order_id: t.order_id,
+              order_no: t.order_no,
+              customer: t.customer,
+              process_type: t.material ? '片材' : '-',
+              material: t.material || '-',
+              sheet_size: t.sheet_spec || '-',
+              sheet_qty: t.sheet_qty || '-',
+              slice_size: t.slice_spec || '-',
+              punch_spec: t.punch_spec || '-',
+              priority: t.priority || '普通',
+              status: t.status || '待开始',
+              step_name: t.step_name,
+              worker: t.worker,
+              machine: t.machine,
+              casual_workers: t.casual_workers,
+              estimated_time: t.estimated_time
+            }));
+
+            updateStats();
+            renderTasks();
+            return;
+          }
+        } catch (e) {
+          console.log('智能分配API未响应，使用默认筛选');
+        }
+
+        // 如果没有智能分配数据，使用默认筛选
+        const response = await fetch('/api/schedule');
+        const allOrders = await response.json();
+
+        // 根据师傅职责匹配订单
+        tasks = allOrders.filter(order => {
+          const processType = order.process_type || '';
+          const isCompleted = order.completed === '完单';
+
+          if (isCompleted) return false;
+
+          switch (workerName) {
+            case '郑思远':
+              return processType.includes('片材') || processType.includes('切片') || processType.includes('冲型');
+            case '伍乾进':
+              return processType.includes('片材');
+            case '莫齐国':
+              return processType.includes('切片') || processType === '切片冲型';
+            case '李乐':
+              return processType.includes('冲型');
+            case '简翠花':
+              return processType.includes('背胶') || processType.includes('点胶');
+            case '杨合进':
+              return true;
+            default:
+              return false;
+          }
+        });
+
+        updateStats();
+        renderTasks();
+      } catch (error) {
+        console.error('加载任务失败:', error);
+        tasks = [];
+        renderTasks();
+      }
+    }
+
+    function updateStats() {
+      document.getElementById('pendingCount').textContent = tasks.filter(t => t.status === '待分配' || t.status === '已分配' || t.status === '待开始').length;
+      document.getElementById('inProgressCount').textContent = tasks.filter(t => t.status === '生产中').length;
+      document.getElementById('completedCount').textContent = tasks.filter(t => t.status === '已完成').length;
+      document.getElementById('casualCount').textContent = Math.floor(Math.random() * 5) + 1; // 模拟零工数
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      renderTasks();
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('taskList');
+      let filtered = tasks;
+
+      console.log('所有任务:', tasks);
+
+      if (currentTab === 'pending') {
+        filtered = tasks.filter(t => t.status === '待开始' || t.status === '待分配' || t.status === '已分配');
+      } else if (currentTab === 'in_progress') {
+        filtered = tasks.filter(t => t.status === '进行中' || t.status === '生产中');
+      } else {
+        filtered = tasks.filter(t => t.status === '已完成');
+      }
+
+      console.log('过滤后任务:', filtered);
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-tip">暂无任务</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(task => `
+        <div class="task-card priority-${task.priority || '普通'}">
+          <div class="task-header">
+            <div class="task-customer">${task.customer || '-'}</div>
+            <span class="tag tag-${task.priority || '普通'}">${task.priority || '普通'}</span>
+          </div>
+          <div class="task-info">
+            <span><b>订单号:</b> ${task.order_no || '-'}</span>
+            <span><b>当前工序:</b> ${task.step_name || '-'}</span>
+            <span><b>使用机器:</b> ${task.machine || '-'}</span>
+            <span><b>用料:</b> ${task.material || '-'}</span>
+            <span><b>尺寸:</b> ${task.sheet_size || '-'}</span>
+            <span><b>数量:</b> ${task.sheet_qty || '-'}</span>
+            <span><b>需要零工:</b> ${task.casual_workers || 0} 人</span>
+            <span><b>预计工时:</b> ${task.estimated_time || 0} 分钟</span>
+            <span><b>状态:</b> <span class="tag tag-${task.status || '待开始'}">${task.status || '待开始'}</span></span>
+          </div>
+
+          <div class="task-actions">
+            ${task.status === '待开始' ? `
+              <button class="btn btn-primary" onclick="startTask('${task.id}')">开始任务</button>
+            ` : ''}
+            ${task.status === '进行中' ? `
+              <button class="btn btn-success" onclick="showCompleteModal('${task.id}')">完成任务</button>
+              <button class="btn btn-secondary" onclick="pauseTask('${task.id}')">暂停任务</button>
+              <button class="btn btn-secondary" onclick="updateProgress('${task.id}')">更新进度</button>
+            ` : ''}
+            ${task.status === '暂停' ? `
+              <button class="btn btn-primary" onclick="resumeTask('${task.id}')">恢复任务</button>
+            ` : ''}
+            ${task.status === '已完成' ? `
+              <span style="color: #27ae60; font-weight: 500;">✓ 已完成</span>
+            ` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function showOrderDetail(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+
+      const content = document.getElementById('orderDetailContent');
+      content.innerHTML = `
+        <div style="margin-bottom: 20px;">
+          <h3 style="margin-bottom: 10px;">${task.customer || '未知客户'}</h3>
+          <p style="color: #666;">${task.process_type || '-'}</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+          <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
+            <label style="font-size: 12px; color: #999;">订单号</label>
+            <div style="font-weight: 500;">${task.order_no || '-'}</div>
+          </div>
+          <div style="padding: 10px; background: #f8f9fa; border-radius: 6px;">
+            <label style="font-size: 12px; color: #999;">优先级</label>
+            <div style="font-weight: 500;">${task.priority || '普通'}</div>
+          </div>
+        </div>
+
+        <div style="padding: 10px; background: #e3f2fd; border-radius: 6px; margin-bottom: 15px;">
+          <label style="font-size: 12px; color: #1976d2;">用料</label>
+          <div style="font-weight: 500; font-size: 15px;">${task.material || task.material_info || '-'}</div>
+        </div>
+
+        <div style="padding: 10px; background: #e8f5e9; border-radius: 6px; margin-bottom: 15px;">
+          <label style="font-size: 12px; color: #2e7d32;">片材尺寸（破片师傅要破的尺寸）</label>
+          <div style="font-weight: 500; font-size: 15px;">${task.sheet_size || task.sheet_spec || '-'}</div>
+          <div style="font-size: 13px; color: #666; margin-top: 5px;">数量: ${task.sheet_qty || '-'}</div>
+        </div>
+
+        ${task.slice_size || task.slice_qty ? `
+        <div style="padding: 10px; background: #fff3e0; border-radius: 6px; margin-bottom: 15px;">
+          <label style="font-size: 12px; color: #e65100;">切片尺寸</label>
+          <div style="font-weight: 500; font-size: 15px;">${task.slice_size || '-'}</div>
+          <div style="font-size: 13px; color: #666; margin-top: 5px;">数量: ${task.slice_qty || '-'}</div>
+        </div>
+        ` : ''}
+
+        ${task.punch_process || task.punch_size || task.punch_qty ? `
+        <div style="padding: 10px; background: #fce4ec; border-radius: 6px; margin-bottom: 15px;">
+          <label style="font-size: 12px; color: #c62828;">冲型信息</label>
+          ${task.punch_process ? `<div style="font-size: 13px; color: #666;">冲型工艺: ${task.punch_process}</div>` : ''}
+          <div style="font-weight: 500; font-size: 15px;">冲型后尺寸: ${task.punch_size || '-'}</div>
+          <div style="font-size: 13px; color: #666; margin-top: 5px;">数量: ${task.punch_qty || '-'}</div>
+        </div>
+        ` : ''}
+
+        ${task.remark ? `
+          <div style="padding: 10px; background: #fff3cd; border-radius: 6px; margin-bottom: 15px;">
+            <label style="font-size: 12px; color: #856404;">备注</label>
+            <div style="color: #856404;">${task.remark}</div>
+          </div>
+        ` : ''}
+      `;
+
+      document.getElementById('orderDetailModal').classList.add('active');
+    }
+
+    async function startTask(id) {
+      try {
+        const response = await fetch(`/api/agent/assignment/${id}/start`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ userId: currentUser.id })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert('任务已开始！');
+          loadTasks();
+        } else {
+          alert('开始失败: ' + result.error);
+        }
+      } catch (error) {
+        alert('开始失败: ' + error.message);
+      }
+    }
+
+    async function pauseTask(id) {
+      const reason = prompt('请输入暂停原因:');
+      if (!reason) return;
+
+      try {
+        const response = await fetch(`/api/agent/assignment/${id}/pause`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ userId: currentUser.id, reason })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert('任务已暂停');
+          loadTasks();
+        }
+      } catch (error) {
+        alert('暂停失败: ' + error.message);
+      }
+    }
+
+    async function resumeTask(id) {
+      try {
+        const response = await fetch(`/api/agent/assignment/${id}/resume`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ userId: currentUser.id })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert('任务已恢复');
+          loadTasks();
+        }
+      } catch (error) {
+        alert('恢复失败: ' + error.message);
+      }
+    }
+
+    function updateProgress(id) {
+      document.getElementById('completeProgressId').value = id;
+      document.getElementById('completeQty').value = '';
+      document.getElementById('completeModal').classList.add('active');
+    }
+
+    function showCompleteModal(id) {
+      document.getElementById('completeProgressId').value = id;
+      document.getElementById('completeQty').value = '';
+      document.getElementById('completeModal').classList.add('active');
+    }
+
+    document.getElementById('completeForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const id = document.getElementById('completeProgressId').value;
+      const qty = parseFloat(document.getElementById('completeQty').value);
+
+      try {
+        // 调用API完成工序
+        const response = await fetch(`/api/agent/assignment/${id}/complete`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ userId: currentUser.id, quantity: qty })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          if (result.allCompleted) {
+            alert(`任务完成！所有工序已完成，订单已完单。`);
+          } else {
+            alert(`工序完成！完成数量: ${qty}`);
+          }
+          closeModal('completeModal');
+          loadTasks();
+        } else {
+          alert('完成失败: ' + result.error);
+        }
+      } catch (error) {
+        alert('完成失败: ' + error.message);
+      }
+    };
+
+    function showFeedbackModal() {
+      const select = document.getElementById('feedbackOrder');
+      select.innerHTML = '<option value="">无（通用反馈）</option>';
+      tasks.forEach(t => {
+        if (t.status !== '已完成') {
+          select.innerHTML += `<option value="${t.id}">${t.order_no || '-'} - ${t.customer || '-'}</option>`;
+        }
+      });
+
+      document.getElementById('feedbackType').value = '';
+      document.getElementById('feedbackContent').value = '';
+      document.getElementById('feedbackModal').classList.add('active');
+    }
+
+    document.getElementById('feedbackForm').onsubmit = async function(e) {
+      e.preventDefault();
+
+      const data = {
+        order_id: document.getElementById('feedbackOrder').value || null,
+        from_worker_id: currentUser.id,
+        type: document.getElementById('feedbackType').value,
+        content: document.getElementById('feedbackContent').value
+      };
+
+      try {
+        await fetch('/api/feedbacks', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(data)
+        });
+        alert('反馈已提交');
+        closeModal('feedbackModal');
+      } catch (error) {
+        alert('提交失败');
+      }
+    };
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    // 材料计算功能
+    function showCalculator() {
+      const html = `
+        <div style="padding: 20px;">
+          <h3 style="margin-bottom: 20px;">材料计算器</h3>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+              <h4 style="margin-bottom: 10px; color: #667eea;">产品参数</h4>
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 12px; color: #666;">产品厚度 (mm)</label>
+                <input type="number" id="calcThickness" step="0.1" placeholder="如：25" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              </div>
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 12px; color: #666;">产品宽度 (mm)</label>
+                <input type="number" id="calcWidth" step="0.1" placeholder="如：100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              </div>
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 12px; color: #666;">产品长度 (mm)</label>
+                <input type="number" id="calcLength" step="0.1" placeholder="如：200" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              </div>
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 12px; color: #666;">需求数量</label>
+                <input type="number" id="calcQty" min="1" placeholder="如：1000" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+              </div>
+            </div>
+            <div>
+              <h4 style="margin-bottom: 10px; color: #27ae60;">原材料参数</h4>
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 12px; color: #666;">原材料宽度 (m)</label>
+                <select id="calcRawWidth" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="1">1m (实际1.05m)</option>
+                  <option value="1.2">1.2m (实际1.27m)</option>
+                  <option value="1.4">1.4m (实际1.46m)</option>
+                  <option value="1.5">1.5m (实际1.55m)</option>
+                </select>
+              </div>
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 12px; color: #666;">原材料长度 (m)</label>
+                <select id="calcRawLength" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="3">3m (实际3.07m)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <button onclick="calculateMaterial()" style="width: 100%; padding: 10px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px;">计算</button>
+          <div id="calcResult" style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px; display: none;"></div>
+        </div>
+      `;
+
+      document.getElementById('orderDetailContent').innerHTML = html;
+      document.getElementById('orderDetailModal').classList.add('active');
+    }
+
+    async function calculateMaterial() {
+      const data = {
+        productThickness: parseFloat(document.getElementById('calcThickness').value) || 25,
+        productWidth: parseFloat(document.getElementById('calcWidth').value) || 100,
+        productLength: parseFloat(document.getElementById('calcLength').value) || 200,
+        productQty: parseInt(document.getElementById('calcQty').value) || 1000,
+        rawMaterialThickness: 60,
+        rawMaterialWidth: parseFloat(document.getElementById('calcRawWidth').value) || 1.4,
+        rawMaterialLength: parseFloat(document.getElementById('calcRawLength').value) || 3
+      };
+
+      try {
+        const response = await fetch('/api/calculator/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await response.json();
+
+        document.getElementById('calcResult').style.display = 'block';
+        document.getElementById('calcResult').innerHTML = `
+          <h4 style="margin-bottom: 10px;">计算结果</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">
+            <div><b>换算厚度:</b> ${result.result.actualThickness}mm</div>
+            <div><b>一床可开片数:</b> ${result.result.sheetsPerBed} 张</div>
+            <div><b>一张可切片数:</b> ${result.result.piecesPerSheet} 片</div>
+            <div><b>需要原材料:</b> ${result.result.sheetsNeeded} 张</div>
+            <div><b>需要床数:</b> ${result.result.bedsNeeded} 床</div>
+            <div><b>废料数:</b> ${result.result.waste} 片</div>
+          </div>
+          <div style="margin-top: 10px; font-size: 12px; color: #666;">
+            换算说明: 厚度 ${result.notes.thicknessRule}，尺寸 ${result.notes.sizeRule}
+          </div>
+        `;
+      } catch (error) {
+        alert('计算失败');
+      }
+    }
+  </script>
+</body>
+</html>

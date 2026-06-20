@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>排班管理 - 溢彩包装</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 { font-size: 18px; color: #333; }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn-secondary { background: #f0f0f0; color: #333; }
+    .btn-primary { background: #667eea; color: white; }
+    .btn-success { background: #27ae60; color: white; }
+
+    .content { padding: 20px; }
+
+    .section {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    .week-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .week-title { font-size: 18px; font-weight: 600; color: #333; }
+
+    .schedule-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .schedule-table th, .schedule-table td {
+      padding: 12px 8px;
+      text-align: center;
+      border: 1px solid #eee;
+    }
+
+    .schedule-table th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #666;
+    }
+
+    .schedule-table td {
+      min-width: 100px;
+    }
+
+    .worker-cell {
+      padding: 8px;
+      background: #e3f2fd;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .worker-cell:hover {
+      background: #bbdefb;
+    }
+
+    .worker-cell.empty {
+      background: #f5f5f5;
+      color: #999;
+    }
+
+    .worker-cell.off {
+      background: #ffebee;
+      color: #c62828;
+    }
+
+    .worker-name { font-weight: 500; }
+    .worker-role { font-size: 11px; color: #666; }
+
+    .casual-section {
+      margin-top: 20px;
+    }
+
+    .casual-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+    }
+
+    .casual-day {
+      text-align: center;
+    }
+
+    .casual-day label {
+      display: block;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .casual-day input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active { display: flex; }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      width: 400px;
+      padding: 20px;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+    .form-group select, .form-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>排班管理</h1>
+    <div>
+      <a href="admin.html" class="btn btn-secondary">返回</a>
+      <button class="btn btn-primary" onclick="saveSchedule()">保存排班</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- 周视图 -->
+    <div class="section">
+      <div class="week-nav">
+        <button class="btn btn-secondary" onclick="prevWeek()">← 上周</button>
+        <div class="week-title" id="weekTitle">2026年6月第4周</div>
+        <button class="btn btn-secondary" onclick="nextWeek()">下周 →</button>
+      </div>
+
+      <table class="schedule-table">
+        <thead>
+          <tr>
+            <th>师傅</th>
+            <th>周一</th>
+            <th>周二</th>
+            <th>周三</th>
+            <th>周四</th>
+            <th>周五</th>
+            <th>周六</th>
+            <th>周日</th>
+          </tr>
+        </thead>
+        <tbody id="scheduleBody"></tbody>
+      </table>
+    </div>
+
+    <!-- 零工安排 -->
+    <div class="section casual-section">
+      <div class="section-title">零工安排</div>
+      <div class="casual-grid" id="casualGrid"></div>
+    </div>
+  </div>
+
+  <!-- 编辑排班模态框 -->
+  <div class="modal" id="editModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>编辑排班</h2>
+        <button class="btn" onclick="closeModal()" style="background:none;font-size:24px;">&times;</button>
+      </div>
+      <div class="form-group">
+        <label>师傅</label>
+        <input type="text" id="editWorker" readonly>
+      </div>
+      <div class="form-group">
+        <label>日期</label>
+        <input type="text" id="editDate" readonly>
+      </div>
+      <div class="form-group">
+        <label>状态</label>
+        <select id="editStatus">
+          <option value="上班">上班</option>
+          <option value="休息">休息</option>
+          <option value="请假">请假</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveEdit()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let workers = [];
+    let scheduleData = {};
+    let currentWeekStart = getWeekStart(new Date());
+    let casualWorkers = {};
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadWorkers();
+      renderSchedule();
+      renderCasualGrid();
+    });
+
+    function getWeekStart(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(d.setDate(diff));
+    }
+
+    function formatDate(date) {
+      return date.toISOString().split('T')[0];
+    }
+
+    function loadWorkers() {
+      workers = [
+        { id: 1, name: '郑思远', role: '横竖分切机' },
+        { id: 2, name: '伍乾进', role: '破片机' },
+        { id: 3, name: '老莫', role: '直切机' },
+        { id: 4, name: '李乐', role: '冲床' },
+        { id: 5, name: '老莫老婆', role: '热熔胶机' },
+        { id: 6, name: '杨合进', role: '杂活' }
+      ];
+    }
+
+    function renderSchedule() {
+      const tbody = document.getElementById('scheduleBody');
+      const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+      // 更新周标题
+      const weekEnd = new Date(currentWeekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      document.getElementById('weekTitle').textContent =
+        `${currentWeekStart.getFullYear()}年${currentWeekStart.getMonth()+1}月第${Math.ceil(currentWeekStart.getDate()/7)}周`;
+
+      tbody.innerHTML = workers.map(worker => {
+        const cells = days.map((day, index) => {
+          const date = new Date(currentWeekStart);
+          date.setDate(date.getDate() + index);
+          const dateStr = formatDate(date);
+          const key = `${worker.id}_${dateStr}`;
+          const status = scheduleData[key] || '上班';
+
+          let cellClass = 'worker-cell';
+          if (status === '休息') cellClass += ' off';
+          if (status === '请假') cellClass += ' off';
+
+          return `<td>
+            <div class="${cellClass}" onclick="editSchedule('${worker.name}', '${dateStr}')">
+              <div class="worker-name">${worker.name}</div>
+              <div class="worker-role">${status}</div>
+            </div>
+          </td>`;
+        }).join('');
+
+        return `<tr>${cells}</tr>`;
+      }).join('');
+    }
+
+    function renderCasualGrid() {
+      const grid = document.getElementById('casualGrid');
+      const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+      grid.innerHTML = days.map((day, index) => {
+        const date = new Date(currentWeekStart);
+        date.setDate(date.getDate() + index);
+        const dateStr = formatDate(date);
+
+        return `
+          <div class="casual-day">
+            <label>${day}<br>${dateStr.slice(5)}</label>
+            <input type="number" min="0" value="${casualWorkers[dateStr] || 0}"
+              onchange="updateCasual('${dateStr}', this.value)">
+          </div>
+        `;
+      }).join('');
+    }
+
+    function editSchedule(workerName, dateStr) {
+      document.getElementById('editWorker').value = workerName;
+      document.getElementById('editDate').value = dateStr;
+      document.getElementById('editStatus').value = scheduleData[`${getWorkerId(workerName)}_${dateStr}`] || '上班';
+      document.getElementById('editModal').classList.add('active');
+    }
+
+    function getWorkerId(name) {
+      const worker = workers.find(w => w.name === name);
+      return worker ? worker.id : 0;
+    }
+
+    function saveEdit() {
+      const workerName = document.getElementById('editWorker').value;
+      const dateStr = document.getElementById('editDate').value;
+      const status = document.getElementById('editStatus').value;
+
+      const key = `${getWorkerId(workerName)}_${dateStr}`;
+      scheduleData[key] = status;
+
+      closeModal();
+      renderSchedule();
+    }
+
+    function updateCasual(dateStr, count) {
+      casualWorkers[dateStr] = parseInt(count) || 0;
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').classList.remove('active');
+    }
+
+    function prevWeek() {
+      currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+      renderSchedule();
+      renderCasualGrid();
+    }
+
+    function nextWeek() {
+      currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+      renderSchedule();
+      renderCasualGrid();
+    }
+
+    function saveSchedule() {
+      alert('排班已保存！');
+    }
+  </script>
+</body>
+</html>

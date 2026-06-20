@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数据导出 - 溢彩包装</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 { font-size: 18px; color: #333; }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn-secondary { background: #f0f0f0; color: #333; }
+    .btn-primary { background: #667eea; color: white; }
+
+    .content { padding: 20px; max-width: 800px; margin: 0 auto; }
+
+    .section {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    .export-options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .export-card {
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+
+    .export-card:hover {
+      background: #e3f2fd;
+      border-color: #667eea;
+    }
+
+    .export-card h3 {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .export-card p {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 12px;
+    }
+
+    .export-card .btn {
+      width: 100%;
+    }
+
+    .format-options {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .format-btn {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: white;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .format-btn.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>数据导出</h1>
+    <div>
+      <a href="admin.html" class="btn btn-secondary">返回</a>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="section">
+      <div class="section-title">选择导出内容</div>
+      <div class="export-options">
+        <!-- 订单数据 -->
+        <div class="export-card">
+          <h3>📋 订单数据</h3>
+          <p>导出所有订单信息，包含客户、工艺、用料、数量等</p>
+          <div class="format-options">
+            <button class="format-btn active" onclick="selectFormat(this, 'excel')">Excel</button>
+            <button class="format-btn" onclick="selectFormat(this, 'csv')">CSV</button>
+          </div>
+          <button class="btn btn-primary" style="margin-top: 10px;" onclick="exportOrders('excel')">导出订单</button>
+        </div>
+
+        <!-- 库存数据 -->
+        <div class="export-card">
+          <h3>📦 库存数据</h3>
+          <p>导出当前库存信息，包含厂家、材质、规格、数量等</p>
+          <div class="format-options">
+            <button class="format-btn active" onclick="selectFormat(this, 'excel')">Excel</button>
+            <button class="format-btn" onclick="selectFormat(this, 'csv')">CSV</button>
+          </div>
+          <button class="btn btn-primary" style="margin-top: 10px;" onclick="exportInventory('excel')">导出库存</button>
+        </div>
+
+        <!-- 师傅工作量 -->
+        <div class="export-card">
+          <h3>👷 师傅工作量</h3>
+          <p>导出师傅工作量统计，包含任务数、完成率等</p>
+          <div class="format-options">
+            <button class="format-btn active" onclick="selectFormat(this, 'excel')">Excel</button>
+            <button class="format-btn" onclick="selectFormat(this, 'csv')">CSV</button>
+          </div>
+          <button class="btn btn-primary" style="margin-top: 10px;" onclick="exportWorkerStats('excel')">导出工作量</button>
+        </div>
+
+        <!-- 操作日志 -->
+        <div class="export-card">
+          <h3>📝 操作日志</h3>
+          <p>导出系统操作日志，包含操作人、操作时间、操作内容等</p>
+          <div class="format-options">
+            <button class="format-btn active" onclick="selectFormat(this, 'excel')">Excel</button>
+            <button class="format-btn" onclick="selectFormat(this, 'csv')">CSV</button>
+          </div>
+          <button class="btn btn-primary" style="margin-top: 10px;" onclick="exportLogs('excel')">导出日志</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let selectedFormats = {
+      orders: 'excel',
+      inventory: 'excel',
+      workerStats: 'excel',
+      logs: 'excel'
+    };
+
+    function selectFormat(btn, format) {
+      const card = btn.closest('.export-card');
+      card.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // 更新选中的格式
+      if (card.querySelector('h3').textContent.includes('订单')) {
+        selectedFormats.orders = format;
+      } else if (card.querySelector('h3').textContent.includes('库存')) {
+        selectedFormats.inventory = format;
+      } else if (card.querySelector('h3').textContent.includes('工作量')) {
+        selectedFormats.workerStats = format;
+      } else {
+        selectedFormats.logs = format;
+      }
+    }
+
+    async function exportOrders(format) {
+      try {
+        const response = await fetch('/api/schedule');
+        const data = await response.json();
+
+        if (format === 'csv') {
+          downloadCSV(data, 'orders.csv', ['id', 'order_no', 'customer', 'process_type', 'material', 'sheet_size', 'sheet_qty', 'status']);
+        } else {
+          downloadJSON(data, 'orders.json');
+        }
+      } catch (error) {
+        alert('导出失败: ' + error.message);
+      }
+    }
+
+    async function exportInventory(format) {
+      try {
+        const response = await fetch('/api/inventory');
+        const data = await response.json();
+
+        if (format === 'csv') {
+          downloadCSV(data, 'inventory.csv', ['id', 'manufacturer', 'material', 'specification', 'remaining_stock']);
+        } else {
+          downloadJSON(data, 'inventory.json');
+        }
+      } catch (error) {
+        alert('导出失败: ' + error.message);
+      }
+    }
+
+    async function exportWorkerStats(format) {
+      try {
+        const response = await fetch('/api/agent/assignments');
+        const data = await response.json();
+
+        // 统计每个师傅的工作量
+        const stats = {};
+        data.forEach(a => {
+          if (!stats[a.worker]) {
+            stats[a.worker] = { worker: a.worker, total: 0, completed: 0, inProgress: 0 };
+          }
+          stats[a.worker].total++;
+          if (a.status === '已完成') stats[a.worker].completed++;
+          else if (a.status === '进行中') stats[a.worker].inProgress++;
+        });
+
+        const statsArray = Object.values(stats);
+
+        if (format === 'csv') {
+          downloadCSV(statsArray, 'worker_stats.csv', ['worker', 'total', 'completed', 'inProgress']);
+        } else {
+          downloadJSON(statsArray, 'worker_stats.json');
+        }
+      } catch (error) {
+        alert('导出失败: ' + error.message);
+      }
+    }
+
+    async function exportLogs(format) {
+      try {
+        const response = await fetch('/api/logs?limit=1000');
+        const data = await response.json();
+
+        if (format === 'csv') {
+          downloadCSV(data, 'operation_logs.csv', ['id', 'action', 'target_type', 'target_id', 'created_at']);
+        } else {
+          downloadJSON(data, 'operation_logs.json');
+        }
+      } catch (error) {
+        alert('导出失败: ' + error.message);
+      }
+    }
+
+    function downloadCSV(data, filename, columns) {
+      const csvContent = [
+        columns.join(','),
+        ...data.map(row => columns.map(col => {
+          let value = row[col];
+          if (typeof value === 'string' && value.includes(',')) {
+            value = `"${value}"`;
+          }
+          return value || '';
+        }).join(','))
+      ].join('\n');
+
+      const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      downloadBlob(blob, filename);
+    }
+
+    function downloadJSON(data, filename) {
+      const jsonContent = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonContent], { type: 'application/json' });
+      downloadBlob(blob, filename);
+    }
+
+    function downloadBlob(blob, filename) {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+  </script>
+</body>
+</html>

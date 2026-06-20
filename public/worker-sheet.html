@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>师傅任务单 - 打印版</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Microsoft YaHei', sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    /* 屏幕显示控制栏 */
+    .control-bar {
+      background: white;
+      padding: 20px;
+      border-bottom: 2px solid #eee;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .control-bar select, .control-bar input {
+      padding: 10px 15px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .control-bar button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .btn-print {
+      background: #667eea;
+      color: white;
+    }
+    .btn-print:hover {
+      background: #5a6fd6;
+    }
+    .btn-back {
+      background: #6c757d;
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+    }
+
+    /* 打印内容区域 */
+    .print-area {
+      max-width: 210mm;
+      margin: 20px auto;
+      background: white;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    /* 任务单头部 */
+    .sheet-header {
+      border-bottom: 3px solid #333;
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+    .sheet-title {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .sheet-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: #666;
+    }
+
+    /* 师傅信息 */
+    .worker-info {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      border-left: 4px solid #667eea;
+    }
+    .worker-name {
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+    }
+    .worker-detail {
+      font-size: 13px;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    /* 任务卡片 */
+    .task-card {
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      page-break-inside: avoid;
+      overflow: hidden;
+    }
+    .task-header {
+      background: #667eea;
+      color: white;
+      padding: 12px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .task-number {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .task-priority {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .priority-urgent {
+      background: #ff4757;
+      color: white;
+    }
+    .priority-attention {
+      background: #ffa502;
+      color: white;
+    }
+    .priority-normal {
+      background: rgba(255,255,255,0.3);
+      color: white;
+    }
+    .task-body {
+      padding: 15px;
+    }
+
+    /* 任务详情网格 */
+    .task-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .task-field {
+      display: flex;
+      flex-direction: column;
+    }
+    .task-field.full-width {
+      grid-column: 1 / -1;
+    }
+    .field-label {
+      font-size: 11px;
+      color: #999;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .field-value {
+      font-size: 15px;
+      font-weight: 500;
+      color: #333;
+      padding: 8px 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+      min-height: 36px;
+    }
+    .field-value.highlight {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+    }
+    .field-value.critical {
+      background: #f8d7da;
+      border: 1px solid #dc3545;
+      color: #721c24;
+    }
+
+    /* 流程进度条 */
+    .flow-progress {
+      display: flex;
+      align-items: center;
+      margin: 15px 0;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .flow-step {
+      flex: 1;
+      text-align: center;
+      position: relative;
+    }
+    .flow-step::after {
+      content: '';
+      position: absolute;
+      top: 15px;
+      right: -50%;
+      width: 100%;
+      height: 2px;
+      background: #ddd;
+      z-index: 1;
+    }
+    .flow-step:last-child::after {
+      display: none;
+    }
+    .flow-dot {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #ddd;
+      margin: 0 auto 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: white;
+      position: relative;
+      z-index: 2;
+    }
+    .flow-dot.done {
+      background: #28a745;
+    }
+    .flow-dot.active {
+      background: #667eea;
+      animation: pulse 2s infinite;
+    }
+    .flow-dot.pending {
+      background: #ddd;
+    }
+    .flow-label {
+      font-size: 12px;
+      color: #666;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    /* 备注区域 */
+    .task-notes {
+      background: #fff9e6;
+      border: 1px dashed #ffc107;
+      border-radius: 6px;
+      padding: 10px 15px;
+      margin-top: 10px;
+    }
+    .task-notes-title {
+      font-size: 12px;
+      color: #856404;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .task-notes-content {
+      font-size: 14px;
+      color: #856404;
+    }
+
+    /* 签名区域 */
+    .signature-area {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 2px dashed #ddd;
+      display: flex;
+      justify-content: space-between;
+    }
+    .signature-box {
+      text-align: center;
+    }
+    .signature-line {
+      width: 150px;
+      border-bottom: 1px solid #333;
+      margin-bottom: 5px;
+      height: 40px;
+    }
+    .signature-label {
+      font-size: 12px;
+      color: #666;
+    }
+
+    /* 打印样式 */
+    @media print {
+      body { background: white; }
+      .control-bar { display: none !important; }
+      .print-area {
+        margin: 0;
+        padding: 15mm;
+        box-shadow: none;
+        max-width: none;
+      }
+      .task-card {
+        break-inside: avoid;
+      }
+      .flow-dot.active {
+        animation: none;
+        background: #667eea;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="control-bar">
+    <a href="index.html" class="btn-back">← 返回主页</a>
+    <select id="workerSelect">
+      <option value="">选择师傅</option>
+    </select>
+    <input type="date" id="printDate">
+    <button class="btn-print" onclick="window.print()">🖨️ 打印任务单</button>
+    <button onclick="clearAllAssignments()" style="background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer;">🗑️ 清空分配</button>
+  </div>
+
+  <div class="print-area" id="printArea">
+    <div class="sheet-header">
+      <div class="sheet-title">📋 生产任务单</div>
+      <div class="sheet-info">
+        <span>日期：<span id="displayDate"></span></span>
+        <span>打印时间：<span id="printTime"></span></span>
+      </div>
+    </div>
+
+    <div class="worker-info" id="workerInfo">
+      <div class="worker-name" id="workerNameDisplay">-</div>
+      <div class="worker-detail" id="workerDetailDisplay">-</div>
+    </div>
+
+    <div id="taskList">
+      <!-- 任务卡片会动态生成 -->
+    </div>
+
+    <div class="signature-area">
+      <div class="signature-box">
+        <div class="signature-line"></div>
+        <div class="signature-label">师傅签名</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-line"></div>
+        <div class="signature-label">主管确认</div>
+      </div>
+      <div class="signature-box">
+        <div class="signature-line"></div>
+        <div class="signature-label">完单日期</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allOrders = [];
+    let allWorkers = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // 设置默认日期为今天
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('printDate').value = today;
+      document.getElementById('displayDate').textContent = today;
+
+      loadData();
+    });
+
+    document.getElementById('printDate').addEventListener('change', function() {
+      document.getElementById('displayDate').textContent = this.value;
+    });
+
+    async function loadData() {
+      try {
+        const [ordersRes, workersRes] = await Promise.all([
+          fetch('/api/schedule'),
+          fetch('/api/workers')
+        ]);
+        allOrders = await ordersRes.json();
+        allWorkers = await workersRes.json();
+
+        // 加载订单分配数据
+        await loadAssignments();
+
+        renderWorkerSelect();
+        loadWorkerSheet();
+      } catch (error) {
+        console.error('加载数据失败:', error);
+      }
+    }
+
+    // 订单分配数据（本地存储）
+    let assignments = {};
+
+    async function loadAssignments() {
+      const stored = localStorage.getItem('orderAssignments');
+      if (stored) {
+        assignments = JSON.parse(stored);
+      }
+    }
+
+    function saveAssignments() {
+      localStorage.setItem('orderAssignments', JSON.stringify(assignments));
+    }
+
+    function assignOrder(orderId, workerId) {
+      assignments[orderId] = workerId;
+      saveAssignments();
+      loadWorkerSheet();
+    }
+
+    function clearAllAssignments() {
+      if (confirm('确定要清空所有订单分配吗？')) {
+        assignments = {};
+        saveAssignments();
+        loadWorkerSheet();
+      }
+    }
+
+    function renderWorkerSelect() {
+      const select = document.getElementById('workerSelect');
+      select.innerHTML = '<option value="">选择师傅</option>';
+      allWorkers.forEach(w => {
+        select.innerHTML += '<option value="' + w.id + '">' + w.name + ' - ' + (w.skill || '全能') + '</option>';
+      });
+
+      select.addEventListener('change', loadWorkerSheet);
+    }
+
+    async function loadWorkerSheet() {
+      const workerId = document.getElementById('workerSelect').value;
+      if (!workerId) {
+        document.getElementById('taskList').innerHTML = '<p style="text-align:center;color:#999;padding:40px;">请选择师傅查看任务单</p>';
+        return;
+      }
+
+      const worker = allWorkers.find(w => w.id == workerId);
+      if (!worker) return;
+
+      // 显示师傅信息
+      document.getElementById('workerNameDisplay').textContent = '👨‍🔧 ' + worker.name;
+      document.getElementById('workerDetailDisplay').textContent =
+        '技能：' + (worker.skill || '全能') + ' | 电话：' + (worker.phone || '-');
+
+      // 筛选该师傅的订单
+      const myOrders = allOrders.filter(o =>
+        o.status !== '已完成' && assignments[o.id] == workerId
+      );
+
+      // 未分配的订单
+      const unassignedOrders = allOrders.filter(o =>
+        o.status !== '已完成' && !assignments[o.id]
+      );
+
+      renderTaskCards(myOrders, unassignedOrders, worker);
+    }
+
+    function renderTaskCards(myOrders, unassignedOrders, worker) {
+      const container = document.getElementById('taskList');
+      container.innerHTML = '';
+
+      // 按优先级排序
+      const priorityOrder = { '特急': 0, '注意': 1, '普通': 2, '低': 3 };
+
+      // 显示我的任务
+      if (myOrders.length > 0) {
+        const section1 = document.createElement('div');
+        section1.innerHTML = '<h3 style="margin: 20px 0 10px; color: #28a745;">✅ 我的任务 (' + myOrders.length + '单)</h3>';
+        container.appendChild(section1);
+
+        myOrders.sort((a, b) => (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2));
+        myOrders.forEach((order, index) => {
+          const card = createTaskCard(order, index + 1, worker, true);
+          container.appendChild(card);
+        });
+      }
+
+      // 显示未分配的任务（供分配用）
+      if (unassignedOrders.length > 0) {
+        const section2 = document.createElement('div');
+        section2.innerHTML = '<h3 style="margin: 30px 0 10px; color: #667eea;">📋 待分配任务 (' + unassignedOrders.length + '单) <span style="font-size: 12px; color: #999;">点击"分配给我"添加到任务单</span></h3>';
+        container.appendChild(section2);
+
+        unassignedOrders.sort((a, b) => (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2));
+        unassignedOrders.forEach((order, index) => {
+          const card = createTaskCard(order, index + 1, worker, false);
+          container.appendChild(card);
+        });
+      }
+
+      if (myOrders.length === 0 && unassignedOrders.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:#999;padding:40px;">暂无待处理任务</p>';
+      }
+    }
+
+    function createTaskCard(order, sequence, worker, isAssigned) {
+      const card = document.createElement('div');
+      card.className = 'task-card';
+
+      // 优先级样式
+      let priorityClass = 'priority-normal';
+      let priorityText = '普通';
+      if (order.priority === '特急') {
+        priorityClass = 'priority-urgent';
+        priorityText = '🔴 特急';
+      } else if (order.priority === '注意') {
+        priorityClass = 'priority-attention';
+        priorityText = '🟡 注意';
+      }
+
+      // 流程步骤
+      const flowSteps = getFlowSteps(order);
+
+      // 分配按钮
+      const assignBtn = isAssigned ? '' : `
+        <button onclick="assignOrder(${order.id}, ${worker.id})" style="
+          background: #28a745;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 4px;
+          cursor: pointer;
+          margin-top: 10px;
+          font-size: 13px;
+        ">📌 分配给我</button>
+      `;
+
+      // 构建卡片内容
+      let html = `
+        <div class="task-header" style="${isAssigned ? '' : 'background: #6c757d;'}">
+          <span class="task-number">任务 #${sequence}</span>
+          <span class="task-priority ${priorityClass}">${priorityText}</span>
+        </div>
+        <div class="task-body">
+          <div class="task-grid">
+            <div class="task-field">
+              <div class="field-label">客户</div>
+              <div class="field-value highlight">${order.customer || '-'}</div>
+            </div>
+            <div class="task-field">
+              <div class="field-label">加工工艺</div>
+              <div class="field-value">${order.process_type || '-'}</div>
+            </div>
+            <div class="task-field">
+              <div class="field-label">用料</div>
+              <div class="field-value">${order.material || '-'}</div>
+            </div>
+            <div class="task-field">
+              <div class="field-label">类别</div>
+              <div class="field-value">${order.category || '-'}</div>
+            </div>
+          </div>
+
+          ${renderSizeSection(order)}
+
+          <div class="flow-progress">
+            ${flowSteps.map(step => `
+              <div class="flow-step">
+                <div class="flow-dot ${step.status}">${step.icon}</div>
+                <div class="flow-label">${step.label}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          ${order.remark ? `
+            <div class="task-notes">
+              <div class="task-notes-title">⚠️ 特别注意</div>
+              <div class="task-notes-content">${order.remark}</div>
+            </div>
+          ` : ''}
+
+          ${assignBtn}
+        </div>
+      `;
+
+      card.innerHTML = html;
+      return card;
+    }
+
+    function renderSizeSection(order) {
+      let html = '<div class="task-grid" style="margin-top: 12px;">';
+
+      // 片材信息
+      if (order.sheet_size || order.sheet_qty) {
+        html += `
+          <div class="task-field">
+            <div class="field-label">📐 片材尺寸</div>
+            <div class="field-value critical">${order.sheet_size || '-'}</div>
+          </div>
+          <div class="task-field">
+            <div class="field-label">📦 片材数量</div>
+            <div class="field-value critical">${order.sheet_qty || '-'}</div>
+          </div>
+        `;
+      }
+
+      // 切片信息
+      if (order.slice_size || order.slice_qty) {
+        html += `
+          <div class="task-field">
+            <div class="field-label">✂️ 切片尺寸</div>
+            <div class="field-value">${order.slice_size || '-'}</div>
+          </div>
+          <div class="task-field">
+            <div class="field-label">📦 切片数量</div>
+            <div class="field-value">${order.slice_qty || '-'}</div>
+          </div>
+        `;
+      }
+
+      // 冲型信息
+      if (order.punch_size || order.punch_qty) {
+        html += `
+          <div class="task-field">
+            <div class="field-label">🔨 冲型尺寸</div>
+            <div class="field-value">${order.punch_size || '-'}</div>
+          </div>
+          <div class="task-field">
+            <div class="field-label">📦 冲型数量</div>
+            <div class="field-value">${order.punch_qty || '-'}</div>
+          </div>
+        `;
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    function getFlowSteps(order) {
+      const processType = order.process_type || '';
+      const steps = [];
+
+      // 根据工艺类型判断流程步骤
+      if (processType.includes('片材') || processType.includes('库存')) {
+        const isDone = order.sheet_done && order.sheet_done !== '0';
+        steps.push({
+          label: '开片材',
+          icon: isDone ? '✓' : '1',
+          status: isDone ? 'done' : 'pending'
+        });
+      }
+
+      if (processType.includes('切片')) {
+        const isDone = order.slice_done && order.slice_done !== '0';
+        const isActive = !isDone && steps.every(s => s.status === 'done');
+        steps.push({
+          label: '切片',
+          icon: isDone ? '✓' : (steps.length + 1),
+          status: isDone ? 'done' : (isActive ? 'active' : 'pending')
+        });
+      }
+
+      if (processType.includes('冲型')) {
+        const isDone = order.punch_done && order.punch_done !== '0';
+        const isActive = !isDone && steps.every(s => s.status === 'done');
+        steps.push({
+          label: '冲型',
+          icon: isDone ? '✓' : (steps.length + 1),
+          status: isDone ? 'done' : (isActive ? 'active' : 'pending')
+        });
+      }
+
+      // 如果没有匹配到具体步骤，显示通用流程
+      if (steps.length === 0) {
+        steps.push(
+          { label: '待开始', icon: '1', status: 'pending' },
+          { label: '加工中', icon: '2', status: 'pending' },
+          { label: '已完成', icon: '3', status: 'pending' }
+        );
+      }
+
+      return steps;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>录入新订单 - 溢彩包装</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 { font-size: 18px; color: #333; }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary { background: #667eea; color: white; }
+    .btn-secondary { background: #f0f0f0; color: #333; }
+    .btn-success { background: #27ae60; color: white; }
+
+    .content { padding: 20px; max-width: 900px; margin: 0 auto; }
+
+    .form-section {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #333;
+      font-size: 14px;
+    }
+
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .form-group.full-width { grid-column: span 2; }
+
+    .help-text {
+      font-size: 12px;
+      color: #999;
+      margin-top: 5px;
+    }
+
+    /* 加工工艺子选项 */
+    .sub-options {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .sub-options.active { display: block; }
+
+    .sub-option-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .sub-option-item:last-child { margin-bottom: 0; }
+
+    .sub-option-item label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+    }
+
+    /* 产品尺寸列表 */
+    .product-sizes {
+      margin-top: 10px;
+    }
+
+    .product-size-item {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    .product-size-item .remove-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .size-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .size-row input, .size-row select {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    /* 多层输入 */
+    .layers-container {
+      margin-top: 10px;
+    }
+
+    .layer-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .layer-item input {
+      width: 80px;
+      padding: 6px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .add-layer-btn {
+      background: none;
+      border: 1px dashed #999;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .add-btn {
+      background: none;
+      border: 1px dashed #667eea;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      color: #667eea;
+      font-size: 14px;
+    }
+
+    .add-btn:hover { background: #f0f4ff; }
+
+    /* 模板选择 */
+    .template-select {
+      margin-bottom: 20px;
+    }
+
+    .template-chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .template-chip {
+      padding: 8px 15px;
+      background: #f0f0f0;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .template-chip:hover { background: #e3f2fd; }
+    .template-chip.active { background: #667eea; color: white; }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>录入新订单</h1>
+    <div>
+      <a href="index.html" class="btn btn-secondary">返回</a>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- 模板选择 -->
+    <div class="form-section template-select">
+      <div class="section-title">快速模板</div>
+      <div class="template-chips" id="templateChips">
+        <div class="template-chip" onclick="applyTemplate('blank')">空白订单</div>
+        <div class="template-chip" onclick="applyTemplate('sheet')">片材订单</div>
+        <div class="template-chip" onclick="applyTemplate('slice')">切片订单</div>
+        <div class="template-chip" onclick="applyTemplate('punch')">冲型订单</div>
+        <div class="template-chip" onclick="applyTemplate('full')">完整工艺</div>
+      </div>
+    </div>
+
+    <form id="orderForm">
+      <!-- 基本信息 -->
+      <div class="form-section">
+        <div class="section-title">基本信息</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>订单编号 *</label>
+            <input type="text" id="orderNo" required placeholder="如：YC0620-001">
+          </div>
+          <div class="form-group">
+            <label>产品型号</label>
+            <input type="text" id="styleNo" placeholder="如：AB-123">
+          </div>
+          <div class="form-group">
+            <label>客户名称 *</label>
+            <input type="text" id="customer" required list="customerList" placeholder="输入客户名">
+            <datalist id="customerList"></datalist>
+          </div>
+          <div class="form-group">
+            <label>优先级</label>
+            <select id="priority">
+              <option value="普通">普通</option>
+              <option value="低">低</option>
+              <option value="注意">注意</option>
+              <option value="特急">特急</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>客户要求交期</label>
+            <input type="date" id="dueDate">
+          </div>
+          <div class="form-group">
+            <label>类别</label>
+            <select id="category">
+              <option value="片材类">片材类</option>
+              <option value="切片类">切片类</option>
+              <option value="冲型类">冲型类</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 用料信息 -->
+      <div class="form-section">
+        <div class="section-title">用料信息</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>用料 *</label>
+            <input type="text" id="material" required list="materialList" placeholder="如：白色38°B料EVA（岳东）">
+            <datalist id="materialList"></datalist>
+            <div class="help-text">格式：颜色+材质+厚度（厂家），如：白色38°B料EVA（岳东）</div>
+          </div>
+          <div class="form-group">
+            <label>是否拿回老厂生产</label>
+            <select id="isOldFactory">
+              <option value="否">否</option>
+              <option value="是">是</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 加工工艺 -->
+      <div class="form-section">
+        <div class="section-title">加工工艺</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>加工工艺 *</label>
+            <select id="processType" required onchange="updateSubOptions()">
+              <option value="">选择工艺</option>
+              <optgroup label="基本工艺">
+                <option value="片材">片材</option>
+                <option value="切片">切片</option>
+                <option value="冲型">冲型</option>
+              </optgroup>
+              <optgroup label="组合工艺">
+                <option value="片材切片">片材切片</option>
+                <option value="片材冲型">片材冲型</option>
+                <option value="片材背胶">片材背胶</option>
+                <option value="切片冲型">切片冲型</option>
+                <option value="片材切片冲型">片材切片冲型</option>
+              </optgroup>
+              <optgroup label="贴布背胶工艺">
+                <option value="片材背胶冲型">片材背胶冲型</option>
+                <option value="片材背胶切片冲型">片材背胶切片冲型</option>
+                <option value="片材贴布切片冲型">片材贴布切片冲型</option>
+              </optgroup>
+              <optgroup label="库存工艺">
+                <option value="库存冲型">库存冲型</option>
+                <option value="库存切片冲型">库存切片冲型</option>
+                <option value="库存切片">库存切片</option>
+                <option value="库存片材">库存片材</option>
+              </optgroup>
+              <optgroup label="其他">
+                <option value="直接加工">直接加工（外来材料）</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
+        <!-- 贴布/背胶/点胶子选项 -->
+        <div class="sub-options" id="subOptions">
+          <div class="sub-option-item" id="tiebuOption" style="display:none;">
+            <label>
+              <input type="checkbox" id="isTiebu"> 需要贴布
+            </label>
+            <label>
+              <input type="checkbox" id="isTiebuOutsource"> 贴布外发加工
+            </label>
+          </div>
+          <div class="sub-option-item" id="beijiaoOption" style="display:none;">
+            <label>
+              <input type="checkbox" id="isBeijiao"> 需要背胶
+            </label>
+            <label>
+              <input type="checkbox" id="isBeijiaoOutsource"> 背胶外发加工
+            </label>
+          </div>
+          <div class="sub-option-item" id="dianjiaoOption" style="display:none;">
+            <label>
+              <input type="checkbox" id="isDianjiao"> 冲型后需要点胶（打黄胶）
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 片材尺寸 -->
+      <div class="form-section">
+        <div class="section-title">片材尺寸（破片师傅要破的尺寸）</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>宽度（米）</label>
+            <input type="number" id="sheetWidth" step="0.01" placeholder="如：1.44">
+          </div>
+          <div class="form-group">
+            <label>长度（米）</label>
+            <input type="number" id="sheetLength" step="0.01" placeholder="如：3.06">
+          </div>
+          <div class="form-group">
+            <label>厚度（毫米）</label>
+            <input type="number" id="sheetThickness" step="0.1" placeholder="如：25">
+          </div>
+          <div class="form-group">
+            <label>数量（张）</label>
+            <input type="number" id="sheetQty" min="1" placeholder="如：60">
+          </div>
+        </div>
+      </div>
+
+      <!-- 原材料尺寸 -->
+      <div class="form-section">
+        <div class="section-title">原材料尺寸（用于系统算料）</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>原材料宽度（米）</label>
+            <select id="rawWidth">
+              <option value="">选择</option>
+              <option value="1">1m（实际1.05m）</option>
+              <option value="1.2">1.2m（实际1.27m）</option>
+              <option value="1.4">1.4m（实际1.46m）</option>
+              <option value="1.5">1.5m（实际1.55m）</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>原材料长度（米）</label>
+            <select id="rawLength">
+              <option value="">选择</option>
+              <option value="3">3m（实际3.07m）</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>原材料厚度（毫米）</label>
+            <input type="number" id="rawThickness" step="1" placeholder="如：60">
+          </div>
+          <div class="form-group">
+            <label>打边备注</label>
+            <input type="text" id="edgeRemark" placeholder="打边的长宽特殊要求">
+            <div class="help-text">备注打边要求，系统算料时会按此计算</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 产品尺寸 -->
+      <div class="form-section">
+        <div class="section-title">产品尺寸（客户需要的最终尺寸）</div>
+        <div class="help-text" style="margin-bottom: 15px;">
+          支持单层、多层粘合（如7+3mm）、打断（一张片材切成多个尺寸）
+        </div>
+
+        <div class="product-sizes" id="productSizes">
+          <!-- 产品尺寸项会动态添加 -->
+        </div>
+
+        <button type="button" class="add-btn" onclick="addProductSize()">+ 添加产品尺寸</button>
+      </div>
+
+      <!-- 备注 -->
+      <div class="form-section">
+        <div class="section-title">备注信息</div>
+        <div class="form-group">
+          <textarea id="remark" rows="3" placeholder="其他备注信息..."></textarea>
+        </div>
+      </div>
+
+      <!-- 提交按钮 -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" onclick="window.location.href='index.html'">取消</button>
+        <button type="button" class="btn btn-secondary" onclick="saveAsTemplate()">保存为模板</button>
+        <button type="submit" class="btn btn-primary">提交订单</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    let productSizeCount = 0;
+
+    function getToken() {
+      return localStorage.getItem('authToken') || '';
+    }
+
+    function authHeaders() {
+      return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' };
+    }
+
+    // 页面加载
+    document.addEventListener('DOMContentLoaded', function() {
+      loadCustomers();
+      loadMaterials();
+      addProductSize(); // 默认添加一个产品尺寸
+    });
+
+    // 加载客户列表
+    async function loadCustomers() {
+      try {
+        const response = await fetch('/api/schedule');
+        const data = await response.json();
+        const customers = [...new Set(data.map(o => o.customer).filter(Boolean))];
+        const datalist = document.getElementById('customerList');
+        customers.forEach(c => {
+          datalist.innerHTML += `<option value="${c}">`;
+        });
+      } catch (error) {
+        console.error('加载客户列表失败:', error);
+      }
+    }
+
+    // 加载材料列表
+    async function loadMaterials() {
+      try {
+        const response = await fetch('/api/inventory');
+        const data = await response.json();
+        const materials = [...new Set(data.map(i => i.material).filter(Boolean))];
+        const datalist = document.getElementById('materialList');
+        materials.forEach(m => {
+          datalist.innerHTML += `<option value="${m}">`;
+        });
+      } catch (error) {
+        console.error('加载材料列表失败:', error);
+      }
+    }
+
+    // 更新子选项显示
+    function updateSubOptions() {
+      const processType = document.getElementById('processType').value;
+      const subOptions = document.getElementById('subOptions');
+
+      // 根据工艺类型显示相关选项
+      document.getElementById('tiebuOption').style.display = processType.includes('贴布') ? 'flex' : 'none';
+      document.getElementById('beijiaoOption').style.display = processType.includes('背胶') ? 'flex' : 'none';
+      document.getElementById('dianjiaoOption').style.display = processType.includes('冲型') ? 'flex' : 'none';
+
+      // 显示/隐藏子选项区域
+      const hasSubOptions = processType.includes('贴布') || processType.includes('背胶') || processType.includes('冲型');
+      subOptions.classList.toggle('active', hasSubOptions);
+
+      // 根据工艺更新类别
+      const categorySelect = document.getElementById('category');
+      if (processType.includes('片材')) {
+        categorySelect.value = '片材类';
+      } else if (processType.includes('切片')) {
+        categorySelect.value = '切片类';
+      } else if (processType.includes('冲型')) {
+        categorySelect.value = '冲型类';
+      }
+    }
+
+    // 添加产品尺寸
+    function addProductSize() {
+      productSizeCount++;
+      const container = document.getElementById('productSizes');
+      const html = `
+        <div class="product-size-item" id="productSize${productSizeCount}">
+          <button type="button" class="remove-btn" onclick="removeProductSize(${productSizeCount})">&times;</button>
+          <div class="size-row">
+            <div class="form-group">
+              <label>长度（mm）</label>
+              <input type="number" id="productLength${productSizeCount}" step="0.1" placeholder="如：100">
+            </div>
+            <div class="form-group">
+              <label>宽度（mm）</label>
+              <input type="number" id="productWidth${productSizeCount}" step="0.1" placeholder="如：234">
+            </div>
+            <div class="form-group">
+              <label>数量</label>
+              <input type="number" id="productQty${productSizeCount}" min="1" placeholder="如：500">
+            </div>
+            <div class="form-group">
+              <label>来源工艺</label>
+              <select id="productSource${productSizeCount}">
+                <option value="切片">切片</option>
+                <option value="冲型">冲型</option>
+              </select>
+            </div>
+          </div>
+          <div class="layers-container" id="layers${productSizeCount}">
+            <label style="font-size:13px; color:#666;">层数（支持多层叠加）</label>
+            <div class="layer-item">
+              <input type="number" class="layer-thickness" step="0.1" placeholder="厚度mm" value="">
+              <span style="font-size:12px; color:#999;">mm</span>
+              <button type="button" class="add-layer-btn" onclick="addLayer(${productSizeCount})">+ 添加层</button>
+            </div>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+    }
+
+    // 添加层
+    function addLayer(sizeIndex) {
+      const container = document.getElementById(`layers${sizeIndex}`);
+      const html = `
+        <div class="layer-item">
+          <input type="number" class="layer-thickness" step="0.1" placeholder="厚度mm">
+          <span style="font-size:12px; color:#999;">mm</span>
+          <button type="button" class="add-layer-btn" onclick="this.parentElement.remove()">删除</button>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', html);
+    }
+
+    // 删除产品尺寸
+    function removeProductSize(index) {
+      const element = document.getElementById(`productSize${index}`);
+      if (element) {
+        element.remove();
+      }
+    }
+
+    // 应用模板
+    function applyTemplate(template) {
+      // 更新模板选中状态
+      document.querySelectorAll('.template-chip').forEach(c => c.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      switch(template) {
+        case 'blank':
+          document.getElementById('orderForm').reset();
+          break;
+        case 'sheet':
+          document.getElementById('processType').value = '片材';
+          document.getElementById('category').value = '片材类';
+          break;
+        case 'slice':
+          document.getElementById('processType').value = '片材切片';
+          document.getElementById('category').value = '切片类';
+          break;
+        case 'punch':
+          document.getElementById('processType').value = '片材冲型';
+          document.getElementById('category').value = '冲型类';
+          break;
+        case 'full':
+          document.getElementById('processType').value = '片材背胶切片冲型';
+          document.getElementById('category').value = '冲型类';
+          document.getElementById('isBeijiao').checked = true;
+          document.getElementById('isDianjiao').checked = true;
+          break;
+      }
+      updateSubOptions();
+    }
+
+    // 保存为模板
+    function saveAsTemplate() {
+      const template = {
+        processType: document.getElementById('processType').value,
+        category: document.getElementById('category').value,
+        material: document.getElementById('material').value,
+        rawWidth: document.getElementById('rawWidth').value,
+        rawLength: document.getElementById('rawLength').value,
+        rawThickness: document.getElementById('rawThickness').value
+      };
+
+      localStorage.setItem('orderTemplate', JSON.stringify(template));
+      alert('模板已保存');
+    }
+
+    // 表单提交 (P0-2: 调用 API 创建订单)
+    document.getElementById('orderForm').onsubmit = async function(e) {
+      e.preventDefault();
+
+      // 收集产品尺寸数据
+      const productSizes = [];
+      document.querySelectorAll('.product-size-item').forEach((item, index) => {
+        const id = item.id.replace('productSize', '');
+        const layers = [];
+        item.querySelectorAll('.layer-thickness').forEach(input => {
+          if (input.value) {
+            layers.push(parseFloat(input.value));
+          }
+        });
+
+        productSizes.push({
+          length: parseFloat(document.getElementById(`productLength${id}`)?.value) || 0,
+          width: parseFloat(document.getElementById(`productWidth${id}`)?.value) || 0,
+          qty: parseInt(document.getElementById(`productQty${id}`)?.value) || 0,
+          source: document.getElementById(`productSource${id}`)?.value || '切片',
+          layers: layers.length > 0 ? layers : [parseFloat(document.getElementById(`sheetThickness`)?.value) || 0]
+        });
+      });
+
+      // 构建订单数据
+      const orderData = {
+        orderNo: document.getElementById('orderNo').value,
+        styleNo: document.getElementById('styleNo').value,
+        customer: document.getElementById('customer').value,
+        processType: document.getElementById('processType').value,
+        category: document.getElementById('category').value,
+        priority: document.getElementById('priority').value,
+        material: document.getElementById('material').value,
+        dueDate: document.getElementById('dueDate').value,
+
+        // 片材尺寸
+        sheetSpec: `${document.getElementById('sheetWidth').value}m×${document.getElementById('sheetLength').value}m×${document.getElementById('sheetThickness').value}mm`,
+        sheetQty: document.getElementById('sheetQty').value,
+
+        // 原材料尺寸
+        rawWidth: document.getElementById('rawWidth').value,
+        rawLength: document.getElementById('rawLength').value,
+        rawThickness: document.getElementById('rawThickness').value,
+        edgeRemark: document.getElementById('edgeRemark').value,
+
+        // 产品尺寸
+        productSizes: productSizes,
+
+        // 子选项
+        isTiebu: document.getElementById('isTiebu')?.checked || false,
+        isTiebuOutsource: document.getElementById('isTiebuOutsource')?.checked || false,
+        isBeijiao: document.getElementById('isBeijiao')?.checked || false,
+        isBeijiaoOutsource: document.getElementById('isBeijiaoOutsource')?.checked || false,
+        isDianjiao: document.getElementById('isDianjiao')?.checked || false,
+
+        remark: document.getElementById('remark').value
+      };
+
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch('/api/schedule', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + (token || '')
+          },
+          body: JSON.stringify(orderData)
+        });
+        const result = await response.json();
+        if (result.success) {
+          alert('订单创建成功！订单号: ' + (result.order.order_no || ''));
+          window.location.href = 'schedule.html';
+        } else {
+          alert('创建失败: ' + (result.error || '未知错误'));
+        }
+      } catch (error) {
+        alert('提交失败: ' + error.message);
+      }
+    };
+  </script>
+</body>
+</html>

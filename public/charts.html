@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数据图表 - 溢彩包装</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 { font-size: 18px; color: #333; }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn-secondary { background: #f0f0f0; color: #333; }
+
+    .content { padding: 20px; }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }
+
+    .chart-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+    }
+
+    @media (max-width: 768px) {
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>数据图表</h1>
+    <div>
+      <a href="admin.html" class="btn btn-secondary">返回</a>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="charts-grid">
+      <!-- 订单状态分布 -->
+      <div class="chart-card">
+        <div class="chart-title">订单状态分布</div>
+        <div class="chart-container">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 工艺分布 -->
+      <div class="chart-card">
+        <div class="chart-title">加工工艺分布</div>
+        <div class="chart-container">
+          <canvas id="processChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 师傅工作量 -->
+      <div class="chart-card">
+        <div class="chart-title">师傅工作量统计</div>
+        <div class="chart-container">
+          <canvas id="workerChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 客户订单统计 -->
+      <div class="chart-card">
+        <div class="chart-title">客户订单统计</div>
+        <div class="chart-container">
+          <canvas id="customerChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let orders = [];
+    let assignments = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadData();
+    });
+
+    async function loadData() {
+      try {
+        const [ordersRes, assignmentsRes] = await Promise.all([
+          fetch('/api/schedule'),
+          fetch('/api/agent/assignments')
+        ]);
+
+        orders = await ordersRes.json();
+        assignments = await assignmentsRes.json();
+
+        renderStatusChart();
+        renderProcessChart();
+        renderWorkerChart();
+        renderCustomerChart();
+      } catch (error) {
+        console.error('加载数据失败:', error);
+      }
+    }
+
+    function renderStatusChart() {
+      const ctx = document.getElementById('statusChart').getContext('2d');
+
+      const statusCount = {};
+      orders.forEach(o => {
+        const status = o.status || '待分配';
+        statusCount[status] = (statusCount[status] || 0) + 1;
+      });
+
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(statusCount),
+          datasets: [{
+            data: Object.values(statusCount),
+            backgroundColor: ['#3498db', '#f39c12', '#27ae60', '#e74c3c']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+
+    function renderProcessChart() {
+      const ctx = document.getElementById('processChart').getContext('2d');
+
+      const processCount = {};
+      orders.forEach(o => {
+        const process = o.process_type || '其他';
+        processCount[process] = (processCount[process] || 0) + 1;
+      });
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(processCount),
+          datasets: [{
+            label: '订单数',
+            data: Object.values(processCount),
+            backgroundColor: '#667eea'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y'
+        }
+      });
+    }
+
+    function renderWorkerChart() {
+      const ctx = document.getElementById('workerChart').getContext('2d');
+
+      const workerCount = {};
+      assignments.forEach(a => {
+        const worker = a.worker || '未分配';
+        workerCount[worker] = (workerCount[worker] || 0) + 1;
+      });
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(workerCount),
+          datasets: [{
+            label: '任务数',
+            data: Object.values(workerCount),
+            backgroundColor: '#11998e'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+
+    function renderCustomerChart() {
+      const ctx = document.getElementById('customerChart').getContext('2d');
+
+      const customerCount = {};
+      orders.forEach(o => {
+        const customer = o.customer || '未知';
+        customerCount[customer] = (customerCount[customer] || 0) + 1;
+      });
+
+      // 取前10个客户
+      const sorted = Object.entries(customerCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10);
+
+      new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: sorted.map(s => s[0]),
+          datasets: [{
+            data: sorted.map(s => s[1]),
+            backgroundColor: ['#667eea', '#11998e', '#eb3349', '#f093fb', '#4facfe', '#fa709a', '#fee140', '#a8edea', '#fed6e3', '#ffecd2']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+  </script>
+</body>
+</html>

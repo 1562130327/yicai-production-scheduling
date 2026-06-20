@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台 - 溢彩包装</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .header-left h1 { font-size: 18px; color: #333; }
+    .user-name { color: #667eea; font-weight: 500; }
+    .user-role { color: #999; font-size: 13px; }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .btn-primary { background: #667eea; color: white; }
+    .btn-secondary { background: #f0f0f0; color: #333; }
+    .btn-success { background: #27ae60; color: white; }
+    .btn-danger { background: #e74c3c; color: white; }
+
+    .content { padding: 20px; }
+
+    .nav-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .nav-tab {
+      padding: 10px 20px;
+      border: none;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .nav-tab:hover { background: #e3f2fd; }
+    .nav-tab.active { background: #667eea; color: white; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .stat-card h3 { color: #666; font-size: 14px; margin-bottom: 8px; }
+    .stat-card .value { font-size: 28px; font-weight: bold; color: #667eea; }
+
+    .section {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #666;
+    }
+
+    tr:hover { background: #f8f9fa; }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .tag-待处理 { background: #fff3cd; color: #856404; }
+    .tag-处理中 { background: #d1ecf1; color: #0c5460; }
+    .tag-已解决 { background: #d4edda; color: #155724; }
+    .tag-特急 { background: #f8d7da; color: #721c24; }
+    .tag-注意 { background: #fff3cd; color: #856404; }
+
+    /* 模态框 */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active { display: flex; }
+
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-body { padding: 20px; }
+
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <h1>管理后台</h1>
+      <span class="user-name" id="userName">--</span>
+      <span class="user-role" id="userRole">--</span>
+    </div>
+    <div>
+      <a href="index.html" class="btn btn-secondary">主页</a>
+      <button class="btn btn-secondary" onclick="logout()">退出</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchPanel('overview')">总览</button>
+      <button class="nav-tab" onclick="switchPanel('orders')">订单管理</button>
+      <a href="admin-schedule.html" class="nav-tab" style="text-decoration:none;">智能调度</a>
+      <a href="customer-management.html" class="nav-tab" style="text-decoration:none;">客户管理</a>
+      <a href="sample-management.html" class="nav-tab" style="text-decoration:none;">样板管理</a>
+      <a href="schedule-manage.html" class="nav-tab" style="text-decoration:none;">排班管理</a>
+      <a href="performance.html" class="nav-tab" style="text-decoration:none;">绩效统计</a>
+      <button class="nav-tab" onclick="switchPanel('feedbacks')">反馈处理</button>
+      <a href="charts.html" class="nav-tab" style="text-decoration:none;">数据图表</a>
+      <a href="inventory-check.html" class="nav-tab" style="text-decoration:none;">库存盘点</a>
+      <a href="print-tasks.html" class="nav-tab" style="text-decoration:none;">打印任务单</a>
+      <a href="export.html" class="nav-tab" style="text-decoration:none;">数据导出</a>
+      <a href="daily-report.html" class="nav-tab" style="text-decoration:none;">日报统计</a>
+    </div>
+
+    <!-- 总览面板 -->
+    <div class="panel active" id="overviewPanel">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3>总订单</h3>
+          <div class="value" id="totalOrders">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>生产中</h3>
+          <div class="value" id="inProgressOrders" style="color: #f39c12;">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>待处理反馈</h3>
+          <div class="value" id="pendingFeedbacks" style="color: #e74c3c;">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>师傅数量</h3>
+          <div class="value" id="totalWorkers">0</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">待处理反馈</div>
+        <table>
+          <thead>
+            <tr>
+              <th>类型</th>
+              <th>订单</th>
+              <th>反馈人</th>
+              <th>内容</th>
+              <th>时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="overviewFeedbacks"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 订单管理面板 -->
+    <div class="panel" id="ordersPanel">
+      <div class="section">
+        <div class="section-title">
+          订单列表
+          <button class="btn btn-primary" onclick="showAddOrderModal()">新增订单</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>订单号</th>
+              <th>客户</th>
+              <th>工艺</th>
+              <th>优先级</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 师傅管理面板 -->
+    <div class="panel" id="workersPanel">
+      <div class="section">
+        <div class="section-title">
+          师傅列表
+          <button class="btn btn-primary" onclick="showAddWorkerModal()">添加师傅</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>姓名</th>
+              <th>电话</th>
+              <th>擅长</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="workersTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 机器管理面板 -->
+    <div class="panel" id="machinesPanel">
+      <div class="section">
+        <div class="section-title">
+          机器列表
+          <button class="btn btn-primary" onclick="showAddMachineModal()">添加机器</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>负责师傅</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="machinesTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 反馈处理面板 -->
+    <div class="panel" id="feedbacksPanel">
+      <div class="section">
+        <div class="section-title">
+          反馈列表
+          <div>
+            <select id="feedbackStatusFilter" onchange="loadFeedbacks()" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+              <option value="">全部状态</option>
+              <option value="待处理">待处理</option>
+              <option value="处理中">处理中</option>
+              <option value="已解决">已解决</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>类型</th>
+              <th>订单</th>
+              <th>反馈人</th>
+              <th>内容</th>
+              <th>状态</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="feedbacksTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 算料工具面板 -->
+    <div class="panel" id="calculatorPanel">
+      <div class="section">
+        <div class="section-title">算料计算器</div>
+        <form id="calculatorForm">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+              <h4 style="margin-bottom: 15px; color: #667eea;">产品参数</h4>
+              <div class="form-group">
+                <label>产品厚度 (mm)</label>
+                <input type="number" id="productThickness" required step="0.1" placeholder="如：25">
+              </div>
+              <div class="form-group">
+                <label>产品宽度 (mm)</label>
+                <input type="number" id="productWidth" required step="0.1" placeholder="如：100">
+              </div>
+              <div class="form-group">
+                <label>产品长度 (mm)</label>
+                <input type="number" id="productLength" required step="0.1" placeholder="如：200">
+              </div>
+              <div class="form-group">
+                <label>需求数量</label>
+                <input type="number" id="productQty" required min="1" placeholder="如：1000">
+              </div>
+            </div>
+            <div>
+              <h4 style="margin-bottom: 15px; color: #27ae60;">原材料参数</h4>
+              <div class="form-group">
+                <label>原材料厚度 (mm)</label>
+                <input type="number" id="rawThickness" required step="0.1" placeholder="如：60">
+              </div>
+              <div class="form-group">
+                <label>原材料宽度 (m)</label>
+                <select id="rawWidth" required>
+                  <option value="1">1m (实际1.05m)</option>
+                  <option value="1.2">1.2m (实际1.27m)</option>
+                  <option value="1.4">1.4m (实际1.46m)</option>
+                  <option value="1.5">1.5m (实际1.55m)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>原材料长度 (m)</label>
+                <select id="rawLength" required>
+                  <option value="3">3m (实际3.07m)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;">计算</button>
+        </form>
+
+        <div id="calculatorResult" style="display: none; margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增订单模态框 -->
+  <div class="modal" id="orderModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>新增订单</h2>
+        <button class="btn" onclick="closeModal('orderModal')" style="background:none;font-size:24px;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="orderForm">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="form-group">
+              <label>订单号</label>
+              <input type="text" id="orderNo" placeholder="如：YC0001">
+            </div>
+            <div class="form-group">
+              <label>客户名称 *</label>
+              <input type="text" id="orderCustomer" required>
+            </div>
+            <div class="form-group">
+              <label>加工工艺 *</label>
+              <select id="orderProcessType" required>
+                <option value="">选择工艺</option>
+                <option value="片材">片材</option>
+                <option value="切片">切片</option>
+                <option value="冲型">冲型</option>
+                <option value="片材切片">片材切片</option>
+                <option value="片材冲型">片材冲型</option>
+                <option value="片材背胶">片材背胶</option>
+                <option value="切片冲型">切片冲型</option>
+                <option value="片材切片冲型">片材切片冲型</option>
+                <option value="片材背胶切片冲型">片材背胶切片冲型</option>
+                <option value="片材贴布切片冲型">片材贴布切片冲型</option>
+                <option value="库存冲型">库存冲型</option>
+                <option value="库存切片冲型">库存切片冲型</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>优先级</label>
+              <select id="orderPriority">
+                <option value="普通">普通</option>
+                <option value="低">低</option>
+                <option value="注意">注意</option>
+                <option value="特急">特急</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>用料</label>
+              <input type="text" id="orderMaterial" placeholder="如：白色38°B料EVA（岳东）">
+            </div>
+            <div class="form-group">
+              <label>片材尺寸</label>
+              <input type="text" id="orderSheetSpec" placeholder="如：1.44m*3.06m*25mm">
+            </div>
+            <div class="form-group">
+              <label>片材数量</label>
+              <input type="text" id="orderSheetQty" placeholder="如：60张">
+            </div>
+            <div class="form-group">
+              <label>交货日期</label>
+              <input type="date" id="orderDueDate">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>备注</label>
+            <textarea id="orderRemark" rows="2"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('orderModal')">取消</button>
+            <button type="submit" class="btn btn-primary">保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加师傅模态框 -->
+  <div class="modal" id="workerModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>添加师傅</h2>
+        <button class="btn" onclick="closeModal('workerModal')" style="background:none;font-size:24px;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="workerForm">
+          <div class="form-group">
+            <label>姓名 *</label>
+            <input type="text" id="workerName" required>
+          </div>
+          <div class="form-group">
+            <label>电话</label>
+            <input type="text" id="workerPhone">
+          </div>
+          <div class="form-group">
+            <label>擅长工序</label>
+            <input type="text" id="workerSpecialty" placeholder="如：破片机、冲床">
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('workerModal')">取消</button>
+            <button type="submit" class="btn btn-primary">保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加机器模态框 -->
+  <div class="modal" id="machineModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>添加机器</h2>
+        <button class="btn" onclick="closeModal('machineModal')" style="background:none;font-size:24px;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="machineForm">
+          <div class="form-group">
+            <label>机器名称 *</label>
+            <input type="text" id="machineName" required>
+          </div>
+          <div class="form-group">
+            <label>负责师傅</label>
+            <select id="machineWorker">
+              <option value="">请选择</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>状态</label>
+            <select id="machineStatus">
+              <option value="正常">正常</option>
+              <option value="维修">维修</option>
+              <option value="停用">停用</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('machineModal')">取消</button>
+            <button type="submit" class="btn btn-primary">保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 反馈处理模态框 -->
+  <div class="modal" id="feedbackDetailModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>处理反馈</h2>
+        <button class="btn" onclick="closeModal('feedbackDetailModal')" style="background:none;font-size:24px;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="feedbackDetail"></div>
+        <form id="feedbackReplyForm" style="margin-top: 20px;">
+          <input type="hidden" id="replyFeedbackId">
+          <div class="form-group">
+            <label>处理状态</label>
+            <select id="replyStatus">
+              <option value="待处理">待处理</option>
+              <option value="处理中">处理中</option>
+              <option value="已解决">已解决</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>回复内容</label>
+            <textarea id="replyContent" rows="3"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('feedbackDetailModal')">取消</button>
+            <button type="submit" class="btn btn-primary">提交</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let workers = [];
+    let machines = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+      checkLogin();
+      loadAllData();
+    });
+
+    function checkLogin() {
+      const userStr = localStorage.getItem('currentUser');
+      if (!userStr) {
+        window.location.href = 'login.html';
+        return;
+      }
+      currentUser = JSON.parse(userStr);
+      document.getElementById('userName').textContent = currentUser.name;
+      document.getElementById('userRole').textContent = currentUser.role;
+    }
+
+    function logout() {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('authToken');
+      window.location.href = 'login.html';
+    }
+
+    async function loadAllData() {
+      try {
+        const [workersRes, machinesRes, scheduleRes, feedbacksRes] = await Promise.all([
+          fetch('/api/workers'),
+          fetch('/api/machines'),
+          fetch('/api/schedule'),
+          fetch('/api/feedbacks')
+        ]);
+
+        workers = await workersRes.json();
+        machines = await machinesRes.json();
+        const schedule = await scheduleRes.json();
+        const feedbacks = await feedbacksRes.json();
+
+        // 更新总览统计
+        document.getElementById('totalOrders').textContent = schedule.length;
+        document.getElementById('inProgressOrders').textContent = schedule.filter(o => o.status === '生产中').length;
+        document.getElementById('pendingFeedbacks').textContent = feedbacks.filter(f => f.status === '待处理').length;
+        document.getElementById('totalWorkers').textContent = workers.length;
+
+        // 渲染待处理反馈
+        renderOverviewFeedbacks(feedbacks.filter(f => f.status === '待处理').slice(0, 5));
+
+        // 渲染各表格
+        renderOrdersTable(schedule);
+        renderWorkersTable();
+        renderMachinesTable();
+        renderFeedbacksTable(feedbacks);
+
+        // 渲染机器选择框
+        renderWorkerSelect();
+      } catch (error) {
+        console.error('加载数据失败:', error);
+      }
+    }
+
+    function switchPanel(panel) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(panel + 'Panel').classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+
+    function renderOverviewFeedbacks(feedbacks) {
+      const tbody = document.getElementById('overviewFeedbacks');
+      if (feedbacks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">暂无待处理反馈</td></tr>';
+        return;
+      }
+      tbody.innerHTML = feedbacks.map(f => `
+        <tr>
+          <td><span class="tag tag-待处理">${f.type}</span></td>
+          <td>${f.order_no || '-'}</td>
+          <td>${f.from_worker_name || '-'}</td>
+          <td>${f.content.substring(0, 30)}...</td>
+          <td>${new Date(f.created_at).toLocaleDateString('zh-CN')}</td>
+          <td><button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;" onclick="showFeedbackDetail(${f.id})">处理</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderOrdersTable(orders) {
+      const tbody = document.getElementById('ordersTable');
+      tbody.innerHTML = orders.map(o => `
+        <tr>
+          <td>${o.order_no || '-'}</td>
+          <td>${o.customer || '-'}</td>
+          <td>${o.process_type || '-'}</td>
+          <td><span class="tag tag-${o.priority || '普通'}">${o.priority || '普通'}</span></td>
+          <td>${o.status || '-'}</td>
+          <td>
+            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">编辑</button>
+            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">删除</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderWorkersTable() {
+      const tbody = document.getElementById('workersTable');
+      tbody.innerHTML = workers.map(w => `
+        <tr>
+          <td><b>${w.name}</b></td>
+          <td>${w.phone || '-'}</td>
+          <td>${w.specialty || '-'}</td>
+          <td>
+            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">编辑</button>
+            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">删除</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderMachinesTable() {
+      const tbody = document.getElementById('machinesTable');
+      tbody.innerHTML = machines.map(m => `
+        <tr>
+          <td><b>${m.name}</b></td>
+          <td>${m.worker_name || '-'}</td>
+          <td>${m.status || '-'}</td>
+          <td>
+            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">编辑</button>
+            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">删除</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderFeedbacksTable(feedbacks) {
+      const tbody = document.getElementById('feedbacksTable');
+      tbody.innerHTML = feedbacks.map(f => `
+        <tr>
+          <td>${f.type}</td>
+          <td>${f.order_no || '-'}</td>
+          <td>${f.from_worker_name || '-'}</td>
+          <td>${f.content.substring(0, 50)}...</td>
+          <td><span class="tag tag-${f.status}">${f.status}</span></td>
+          <td><button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;" onclick="showFeedbackDetail(${f.id})">处理</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderWorkerSelect() {
+      const select = document.getElementById('machineWorker');
+      select.innerHTML = '<option value="">请选择</option>';
+      workers.forEach(w => {
+        select.innerHTML += `<option value="${w.id}">${w.name}</option>`;
+      });
+    }
+
+    // 模态框相关
+    function showAddOrderModal() {
+      document.getElementById('orderForm').reset();
+      document.getElementById('orderModal').classList.add('active');
+    }
+
+    function showAddWorkerModal() {
+      document.getElementById('workerForm').reset();
+      document.getElementById('workerModal').classList.add('active');
+    }
+
+    function showAddMachineModal() {
+      document.getElementById('machineForm').reset();
+      document.getElementById('machineModal').classList.add('active');
+    }
+
+    function showFeedbackDetail(id) {
+      const feedback = window.currentFeedbacks?.find(f => f.id === id);
+      if (!feedback) return;
+
+      document.getElementById('replyFeedbackId').value = id;
+      document.getElementById('feedbackDetail').innerHTML = `
+        <p><b>类型:</b> ${feedback.type}</p>
+        <p><b>订单:</b> ${feedback.order_no || '-'}</p>
+        <p><b>反馈人:</b> ${feedback.from_worker_name || '-'}</p>
+        <p><b>内容:</b> ${feedback.content}</p>
+        <p><b>时间:</b> ${new Date(feedback.created_at).toLocaleString('zh-CN')}</p>
+      `;
+      document.getElementById('replyStatus').value = feedback.status;
+      document.getElementById('replyContent').value = feedback.reply || '';
+      document.getElementById('feedbackDetailModal').classList.add('active');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    // 表单提交
+    document.getElementById('orderForm').onsubmit = function(e) {
+      e.preventDefault();
+      alert('订单保存成功');
+      closeModal('orderModal');
+    };
+
+    document.getElementById('workerForm').onsubmit = function(e) {
+      e.preventDefault();
+      alert('师傅添加成功');
+      closeModal('workerModal');
+    };
+
+    document.getElementById('machineForm').onsubmit = function(e) {
+      e.preventDefault();
+      alert('机器添加成功');
+      closeModal('machineModal');
+    };
+
+    document.getElementById('feedbackReplyForm').onsubmit = function(e) {
+      e.preventDefault();
+      alert('反馈处理成功');
+      closeModal('feedbackDetailModal');
+    };
+
+    // 算料计算
+    document.getElementById('calculatorForm').onsubmit = async function(e) {
+      e.preventDefault();
+
+      const data = {
+        productThickness: parseFloat(document.getElementById('productThickness').value),
+        productWidth: parseFloat(document.getElementById('productWidth').value),
+        productLength: parseFloat(document.getElementById('productLength').value),
+        productQty: parseInt(document.getElementById('productQty').value),
+        rawMaterialThickness: parseFloat(document.getElementById('rawThickness').value),
+        rawMaterialWidth: parseFloat(document.getElementById('rawWidth').value),
+        rawMaterialLength: parseFloat(document.getElementById('rawLength').value)
+      };
+
+      try {
+        const response = await fetch('/api/calculator/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const result = await response.json();
+
+        document.getElementById('calculatorResult').style.display = 'block';
+        document.getElementById('calculatorResult').innerHTML = `
+          <h4 style="margin-bottom: 15px; color: #333;">计算结果</h4>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+            <div><b>换算厚度:</b> ${result.result.actualThickness}mm</div>
+            <div><b>一床可开片数:</b> ${result.result.sheetsPerBed} 张</div>
+            <div><b>一张可切片数:</b> ${result.result.piecesPerSheet} 片</div>
+            <div><b>宽度方向:</b> ${result.result.piecesPerSheetByWidth} 片</div>
+            <div><b>长度方向:</b> ${result.result.piecesPerSheetByLength} 片</div>
+            <div><b>需要原材料:</b> ${result.result.sheetsNeeded} 张</div>
+            <div><b>需要床数:</b> ${result.result.bedsNeeded} 床</div>
+            <div><b>废料数:</b> ${result.result.waste} 片</div>
+          </div>
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; font-size: 13px; color: #666;">
+            <b>换算说明:</b> 厚度 ${result.notes.thicknessRule}，尺寸 ${result.notes.sizeRule}
+          </div>
+        `;
+      } catch (error) {
+        alert('计算失败');
+      }
+    };
+  </script>
+</body>
+</html>

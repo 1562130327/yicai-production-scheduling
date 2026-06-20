@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>绩效统计 - 溢彩包装</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 { font-size: 18px; color: #333; }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn-secondary { background: #f0f0f0; color: #333; }
+
+    .content { padding: 20px; max-width: 1200px; margin: 0 auto; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .stat-card h3 { color: #666; font-size: 14px; margin-bottom: 8px; }
+    .stat-card .value { font-size: 28px; font-weight: bold; color: #667eea; }
+
+    .section {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #666;
+    }
+
+    tr:hover { background: #f8f9fa; }
+
+    .progress-bar {
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      width: 100px;
+      display: inline-block;
+      margin-right: 10px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #667eea;
+    }
+
+    .progress-fill.high { background: #27ae60; }
+    .progress-fill.medium { background: #f39c12; }
+    .progress-fill.low { background: #e74c3c; }
+
+    .rank-badge {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #667eea;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      line-height: 24px;
+      text-align: center;
+    }
+
+    .rank-1 { background: #ffd700; }
+    .rank-2 { background: #c0c0c0; }
+    .rank-3 { background: #cd7f32; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>绩效统计</h1>
+    <div>
+      <a href="admin.html" class="btn btn-secondary">返回</a>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- 统计卡片 -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <h3>总任务数</h3>
+        <div class="value" id="totalTasks">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>已完成任务</h3>
+        <div class="value" id="completedTasks" style="color: #27ae60;">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>平均完成率</h3>
+        <div class="value" id="avgCompletion">0%</div>
+      </div>
+      <div class="stat-card">
+        <h3>最忙师傅</h3>
+        <div class="value" id="busiestWorker" style="font-size: 20px;">-</div>
+      </div>
+    </div>
+
+    <!-- 师傅绩效排名 -->
+    <div class="section">
+      <div class="section-title">师傅绩效排名</div>
+      <table>
+        <thead>
+          <tr>
+            <th>排名</th>
+            <th>师傅姓名</th>
+            <th>负责工序</th>
+            <th>总任务数</th>
+            <th>已完成</th>
+            <th>完成率</th>
+            <th>工作效率</th>
+          </tr>
+        </thead>
+        <tbody id="performanceTable"></tbody>
+      </table>
+    </div>
+
+    <!-- 本月统计 -->
+    <div class="section">
+      <div class="section-title">本月统计</div>
+      <table>
+        <thead>
+          <tr>
+            <th>师傅姓名</th>
+            <th>本月任务数</th>
+            <th>已完成</th>
+            <th>进行中</th>
+            <th>待开始</th>
+            <th>完成率</th>
+          </tr>
+        </thead>
+        <tbody id="monthlyTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let workers = [];
+    let assignments = [];
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadData();
+    });
+
+    async function loadData() {
+      try {
+        const [workersRes, assignmentsRes] = await Promise.all([
+          fetch('/api/workers'),
+          fetch('/api/agent/assignments')
+        ]);
+
+        workers = await workersRes.json();
+        assignments = await assignmentsRes.json();
+
+        updateStats();
+        renderPerformanceTable();
+        renderMonthlyTable();
+      } catch (error) {
+        console.error('加载数据失败:', error);
+      }
+    }
+
+    function updateStats() {
+      const totalTasks = assignments.length;
+      const completedTasks = assignments.filter(a => a.status === '已完成').length;
+      const avgCompletion = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      // 找出最忙的师傅
+      const workerCount = {};
+      assignments.forEach(a => {
+        workerCount[a.worker] = (workerCount[a.worker] || 0) + 1;
+      });
+      const busiestWorker = Object.entries(workerCount).sort((a, b) => b[1] - a[1])[0];
+
+      document.getElementById('totalTasks').textContent = totalTasks;
+      document.getElementById('completedTasks').textContent = completedTasks;
+      document.getElementById('avgCompletion').textContent = avgCompletion + '%';
+      document.getElementById('busiestWorker').textContent = busiestWorker ? busiestWorker[0] : '-';
+    }
+
+    function renderPerformanceTable() {
+      const tbody = document.getElementById('performanceTable');
+
+      // 统计每个师傅的数据
+      const workerStats = {};
+      workers.filter(w => w.role === '师傅').forEach(w => {
+        workerStats[w.name] = {
+          name: w.name,
+          specialty: w.specialty || '-',
+          total: 0,
+          completed: 0,
+          inProgress: 0,
+          pending: 0
+        };
+      });
+
+      assignments.forEach(a => {
+        if (workerStats[a.worker]) {
+          workerStats[a.worker].total++;
+          if (a.status === '已完成') workerStats[a.worker].completed++;
+          else if (a.status === '进行中') workerStats[a.worker].inProgress++;
+          else workerStats[a.worker].pending++;
+        }
+      });
+
+      // 排序
+      const sorted = Object.values(workerStats).sort((a, b) => b.completed - a.completed);
+
+      tbody.innerHTML = sorted.map((w, index) => {
+        const completionRate = w.total > 0 ? Math.round((w.completed / w.total) * 100) : 0;
+        let progressClass = 'low';
+        if (completionRate >= 80) progressClass = 'high';
+        else if (completionRate >= 50) progressClass = 'medium';
+
+        return `
+          <tr>
+            <td><span class="rank-badge rank-${index + 1}">${index + 1}</span></td>
+            <td><b>${w.name}</b></td>
+            <td>${w.specialty}</td>
+            <td>${w.total}</td>
+            <td>${w.completed}</td>
+            <td>
+              <div class="progress-bar">
+                <div class="progress-fill ${progressClass}" style="width: ${completionRate}%"></div>
+              </div>
+              ${completionRate}%
+            </td>
+            <td>${w.inProgress} 进行中 / ${w.pending} 待开始</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderMonthlyTable() {
+      const tbody = document.getElementById('monthlyTable');
+
+      // 统计每个师傅的月度数据
+      const workerStats = {};
+      workers.filter(w => w.role === '师傅').forEach(w => {
+        workerStats[w.name] = {
+          name: w.name,
+          total: 0,
+          completed: 0,
+          inProgress: 0,
+          pending: 0
+        };
+      });
+
+      assignments.forEach(a => {
+        if (workerStats[a.worker]) {
+          workerStats[a.worker].total++;
+          if (a.status === '已完成') workerStats[a.worker].completed++;
+          else if (a.status === '进行中') workerStats[a.worker].inProgress++;
+          else workerStats[a.worker].pending++;
+        }
+      });
+
+      const sorted = Object.values(workerStats).sort((a, b) => b.total - a.total);
+
+      tbody.innerHTML = sorted.map(w => {
+        const completionRate = w.total > 0 ? Math.round((w.completed / w.total) * 100) : 0;
+
+        return `
+          <tr>
+            <td><b>${w.name}</b></td>
+            <td>${w.total}</td>
+            <td>${w.completed}</td>
+            <td>${w.inProgress}</td>
+            <td>${w.pending}</td>
+            <td>${completionRate}%</td>
+          </tr>
+        `;
+      }).join('');
+    }
+  </script>
+</body>
+</html>

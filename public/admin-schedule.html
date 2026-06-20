@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能调度 - 溢彩包装</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 { font-size: 18px; color: #333; }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn-secondary { background: #f0f0f0; color: #333; }
+    .btn-primary { background: #667eea; color: white; }
+    .btn-success { background: #27ae60; color: white; }
+
+    .content { padding: 20px; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .stat-card h3 { color: #666; font-size: 14px; margin-bottom: 8px; }
+    .stat-card .value { font-size: 28px; font-weight: bold; color: #667eea; }
+
+    .section {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #666;
+    }
+
+    tr:hover { background: #f8f9fa; }
+
+    .workload-bar {
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      width: 100px;
+      display: inline-block;
+      margin-right: 10px;
+    }
+
+    .workload-fill {
+      height: 100%;
+      background: #667eea;
+    }
+
+    .workload-fill.high { background: #e74c3c; }
+    .workload-fill.medium { background: #f39c12; }
+    .workload-fill.low { background: #27ae60; }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .tag-待开始 { background: #e3f2fd; color: #1976d2; }
+    .tag-进行中 { background: #fff3cd; color: #856404; }
+    .tag-已完成 { background: #d4edda; color: #155724; }
+
+    .assignment-card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+
+    .assignment-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .assignment-order { font-weight: 600; color: #333; }
+    .assignment-step { font-size: 13px; color: #666; }
+
+    .assignment-info {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .assignment-info-item {
+      padding: 8px;
+      background: white;
+      border-radius: 4px;
+    }
+
+    .assignment-info-item label {
+      display: block;
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 3px;
+    }
+
+    @media (max-width: 768px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .assignment-info { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>智能调度</h1>
+    <div>
+      <a href="admin.html" class="btn btn-secondary">返回</a>
+      <button class="btn btn-primary" onclick="batchAssign()">批量分配</button>
+      <button class="btn btn-success" onclick="printAllTasks()">打印所有任务单</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- 统计卡片 -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <h3>待分配订单</h3>
+        <div class="value" id="pendingOrders">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>已分配订单</h3>
+        <div class="value" id="assignedOrders" style="color: #27ae60;">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>师傅总数</h3>
+        <div class="value" id="totalWorkers">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>预计总工时</h3>
+        <div class="value" id="totalHours" style="color: #f39c12;">0h</div>
+      </div>
+    </div>
+
+    <!-- 师傅工作量 -->
+    <div class="section">
+      <div class="section-title">
+        师傅工作量
+        <button class="btn btn-secondary" onclick="refreshWorkload()">刷新</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>师傅姓名</th>
+            <th>当前订单数</th>
+            <th>预计工时</th>
+            <th>工作量</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+        <tbody id="workloadTable"></tbody>
+      </table>
+    </div>
+
+    <!-- 订单分配结果 -->
+    <div class="section">
+      <div class="section-title">
+        订单分配结果
+        <button class="btn btn-primary" onclick="batchAssign()">一键分配所有订单</button>
+      </div>
+      <div id="assignmentResults"></div>
+    </div>
+  </div>
+
+  <script>
+    let workload = [];
+    let orders = [];
+
+    function getToken() {
+      return localStorage.getItem('authToken') || '';
+    }
+
+    function authHeaders() {
+      return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' };
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadAllData();
+    });
+
+    async function loadAllData() {
+      try {
+        const [workloadRes, ordersRes] = await Promise.all([
+          fetch('/api/agent/workload'),
+          fetch('/api/schedule')
+        ]);
+
+        workload = await workloadRes.json();
+        orders = await ordersRes.json();
+
+        updateStats();
+        renderWorkload();
+      } catch (error) {
+        console.error('加载数据失败:', error);
+      }
+    }
+
+    function updateStats() {
+      const pending = orders.filter(o => o.completed !== '完单').length;
+      const assigned = orders.filter(o => o.completed === '完单').length;
+      const totalHours = workload.reduce((sum, w) => sum + w.estimated_hours, 0);
+
+      document.getElementById('pendingOrders').textContent = pending;
+      document.getElementById('assignedOrders').textContent = assigned;
+      document.getElementById('totalWorkers').textContent = workload.length;
+      document.getElementById('totalHours').textContent = totalHours.toFixed(1) + 'h';
+    }
+
+    function renderWorkload() {
+      const tbody = document.getElementById('workloadTable');
+
+      tbody.innerHTML = workload.map(w => {
+        const maxHours = 8;
+        const percentage = Math.min(100, (w.estimated_hours / maxHours) * 100);
+        let workloadClass = 'low';
+        if (percentage > 80) workloadClass = 'high';
+        else if (percentage > 50) workloadClass = 'medium';
+
+        let status = '空闲';
+        if (percentage > 80) status = '繁忙';
+        else if (percentage > 50) status = '适中';
+
+        return `
+          <tr>
+            <td><b>${w.worker}</b></td>
+            <td>${w.current_orders}</td>
+            <td>${w.estimated_hours}h</td>
+            <td>
+              <div class="workload-bar">
+                <div class="workload-fill ${workloadClass}" style="width: ${percentage}%"></div>
+              </div>
+              ${percentage.toFixed(0)}%
+            </td>
+            <td>${status}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function batchAssign() {
+      if (!confirm('确定要批量分配所有未完成的订单吗？')) return;
+
+      try {
+        const pendingOrders = orders.filter(o => o.completed !== '完单');
+
+        const response = await fetch('/api/agent/batch-assign', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ orders: pendingOrders })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert(`成功分配 ${result.total_orders} 个订单！`);
+          renderAssignmentResults(result.results);
+        } else {
+          alert('分配失败: ' + result.error);
+        }
+      } catch (error) {
+        alert('分配失败: ' + error.message);
+      }
+    }
+
+    function renderAssignmentResults(results) {
+      const container = document.getElementById('assignmentResults');
+
+      if (!results || results.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">暂无分配结果</div>';
+        return;
+      }
+
+      container.innerHTML = results.map(r => `
+        <div class="assignment-card">
+          <div class="assignment-header">
+            <span class="assignment-order">${r.order_no || '-'} - ${r.customer || '-'}</span>
+            <span class="assignment-step">${r.process_type || '-'}</span>
+          </div>
+          <div class="assignment-info">
+            ${r.assignments.map(a => `
+              <div class="assignment-info-item">
+                <label>${a.step_name}</label>
+                <div><b>${a.worker}</b> | ${a.machine} | 零工: ${a.casual_workers}人 | ${a.estimated_time}分钟</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function refreshWorkload() {
+      loadAllData();
+    }
+
+    function printAllTasks() {
+      window.open('print-tasks.html', '_blank');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>打印任务单 - 溢彩包装</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: white;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 { font-size: 18px; color: #333; }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .btn-secondary { background: #f0f0f0; color: #333; }
+    .btn-primary { background: #667eea; color: white; }
+
+    .content { padding: 20px; max-width: 1000px; margin: 0 auto; }
+
+    .selector-section {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .selector-section h3 {
+      font-size: 16px;
+      color: #333;
+      margin-bottom: 15px;
+    }
+
+    .worker-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 15px;
+    }
+
+    .worker-card {
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+
+    .worker-card:hover { background: #e3f2fd; }
+    .worker-card.active { background: #667eea; color: white; border-color: #667eea; }
+
+    .worker-card .name { font-weight: 600; font-size: 16px; margin-bottom: 5px; }
+    .worker-card .role { font-size: 12px; color: #666; }
+    .worker-card.active .role { color: rgba(255,255,255,0.8); }
+
+    /* 打印预览区域 */
+    .print-preview {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .print-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .print-title { font-size: 20px; font-weight: 600; color: #333; }
+    .print-date { color: #666; }
+
+    .task-item {
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
+      page-break-inside: avoid;
+    }
+
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed #ddd;
+    }
+
+    .task-order { font-weight: 600; font-size: 16px; color: #333; }
+    .task-customer { font-size: 14px; color: #666; }
+
+    .task-info {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .task-info-item {
+      padding: 8px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+
+    .task-info-item label {
+      display: block;
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 3px;
+    }
+
+    .task-info-item .value {
+      font-weight: 500;
+      color: #333;
+    }
+
+    .task-info-item.highlight {
+      background: #e3f2fd;
+    }
+
+    .task-info-item.highlight .value {
+      color: #1976d2;
+    }
+
+    .no-data {
+      text-align: center;
+      color: #999;
+      padding: 40px;
+    }
+
+    @media print {
+      .header, .selector-section { display: none; }
+      .print-preview { box-shadow: none; padding: 0; }
+      .task-item { border: 1px solid #000; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>打印任务单</h1>
+    <div>
+      <button class="btn btn-secondary" onclick="window.history.back()">返回</button>
+      <button class="btn btn-primary" onclick="printTasks()">打印</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- 师傅选择 -->
+    <div class="selector-section">
+      <h3>选择师傅</h3>
+      <div class="worker-grid" id="workerGrid"></div>
+    </div>
+
+    <!-- 打印预览 -->
+    <div class="print-preview" id="printPreview">
+      <div class="no-data">请选择师傅查看任务</div>
+    </div>
+  </div>
+
+  <script>
+    let workers = [];
+    let selectedWorker = null;
+    let printData = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+      loadWorkers();
+    });
+
+    async function loadWorkers() {
+      try {
+        const response = await fetch('/api/workers');
+        workers = await response.json();
+        renderWorkerGrid();
+      } catch (error) {
+        console.error('加载师傅列表失败:', error);
+      }
+    }
+
+    function renderWorkerGrid() {
+      const container = document.getElementById('workerGrid');
+      container.innerHTML = workers.map(w => `
+        <div class="worker-card" onclick="selectWorker('${w.name}')">
+          <div class="name">${w.name}</div>
+          <div class="role">${w.specialty || '-'}</div>
+        </div>
+      `).join('');
+    }
+
+    async function selectWorker(name) {
+      selectedWorker = name;
+
+      // 更新选中状态
+      document.querySelectorAll('.worker-card').forEach(c => c.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      // 加载该师傅的任务
+      try {
+        const response = await fetch(`/api/agent/print/${encodeURIComponent(name)}`);
+        printData = await response.json();
+        renderPrintPreview();
+      } catch (error) {
+        console.error('加载任务失败:', error);
+      }
+    }
+
+    function renderPrintPreview() {
+      if (!printData) return;
+
+      const container = document.getElementById('printPreview');
+
+      if (!printData.tasks || printData.tasks.length === 0) {
+        container.innerHTML = '<div class="no-data">该师傅暂无任务</div>';
+        return;
+      }
+
+      const html = `
+        <div class="print-header">
+          <div class="print-title">溢彩包装 - 生产任务单</div>
+          <div class="print-date">师傅: ${printData.worker} | 日期: ${printData.date}</div>
+        </div>
+
+        ${printData.tasks.map(task => `
+          <div class="task-item">
+            <div class="task-header">
+              <span class="task-order">${task.order_no || '-'}</span>
+              <span class="task-customer">${task.customer || '-'}</span>
+            </div>
+            <div class="task-info">
+              <div class="task-info-item">
+                <label>加工工艺</label>
+                <div class="value">${task.process_type || '-'}</div>
+              </div>
+              <div class="task-info-item highlight">
+                <label>用料</label>
+                <div class="value">${task.material || '-'}</div>
+              </div>
+              <div class="task-info-item highlight">
+                <label>片材尺寸</label>
+                <div class="value">${task.sheet_spec || '-'}</div>
+              </div>
+              <div class="task-info-item">
+                <label>片材数量</label>
+                <div class="value">${task.sheet_qty || '-'}</div>
+              </div>
+              ${task.slice_spec ? `
+              <div class="task-info-item highlight">
+                <label>切片尺寸</label>
+                <div class="value">${task.slice_spec}</div>
+              </div>
+              ` : ''}
+              ${task.slice_qty ? `
+              <div class="task-info-item">
+                <label>切片数量</label>
+                <div class="value">${task.slice_qty}</div>
+              </div>
+              ` : ''}
+              ${task.punch_spec ? `
+              <div class="task-info-item highlight">
+                <label>冲型尺寸</label>
+                <div class="value">${task.punch_spec}</div>
+              </div>
+              ` : ''}
+              ${task.punch_qty ? `
+              <div class="task-info-item">
+                <label>冲型数量</label>
+                <div class="value">${task.punch_qty}</div>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        `).join('')}
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function printTasks() {
+      window.print();
+    }
+  </script>
+</body>
+</html>
