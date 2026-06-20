@@ -698,9 +698,10 @@ if (hasDbConfig) {
       created_at: new Date().toISOString()
     }));
 
-    // 保存到统一数据模型
-    dataStore.assignments = dataStore.assignments.filter(a => a.order_id !== orderId);
-    dataStore.assignments.push(...newAssignments);
+    // 保存到统一数据模型（不清空数组引用，避免断开data-store内部引用）
+    const filtered = dataStore.assignments.filter(a => a.order_id !== orderId);
+    dataStore.assignments.length = 0;
+    dataStore.assignments.push(...filtered, ...newAssignments);
 
     // 更新订单状态：待分配 → 已分配
     const targetOrder = scheduleData.find(o => o.id === orderId);
@@ -752,9 +753,10 @@ if (hasDbConfig) {
         created_at: new Date().toISOString()
       }));
 
-      // 保存到统一数据模型
-      dataStore.assignments = dataStore.assignments.filter(a => a.order_id !== order.id);
-      dataStore.assignments.push(...newAssignments);
+      // 保存到统一数据模型（不清空数组引用，避免断开data-store内部引用）
+      const filtered = dataStore.assignments.filter(a => a.order_id !== order.id);
+      dataStore.assignments.length = 0;
+      dataStore.assignments.push(...filtered, ...newAssignments);
 
       // 更新订单状态：待分配 → 已分配
       const targetOrder = scheduleData.find(o => o.id === order.id);
