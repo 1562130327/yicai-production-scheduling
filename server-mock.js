@@ -354,7 +354,7 @@ if (hasDbConfig) {
   });
 
   // 反馈 API
-  app.get('/api/feedbacks', requireAuth, (req, res) => {
+  app.get('/api/feedbacks', (req, res) => {
     let result = feedbacksData;
     if (req.query.status) {
       result = result.filter(f => f.status === req.query.status);
@@ -802,14 +802,14 @@ if (hasDbConfig) {
   });
 
   // 获取分配给某个师傅的任务
-  app.get('/api/agent/assignments/:workerName', requireAuth, (req, res) => {
+  app.get('/api/agent/assignments/:workerName', (req, res) => {
     const workerName = decodeURIComponent(req.params.workerName);
     const tasks = dataStore.assignments.filter(a => a.worker === workerName);
     res.json(tasks);
   });
 
   // 获取所有分配结果
-  app.get('/api/agent/assignments', requireAuth, (req, res) => {
+  app.get('/api/agent/assignments', (req, res) => {
     res.json(dataStore.assignments);
   });
 
@@ -823,7 +823,7 @@ if (hasDbConfig) {
     res.json(WORKFLOW_MAP);
   });
 
-  app.get('/api/agent/workload', requireAuth, (req, res) => {
+  app.get('/api/agent/workload', (req, res) => {
     // 从分配数据中计算每个师傅的工作量
     const workload = {};
     dataStore.workers.filter(w => w.role === '师傅').forEach(w => {

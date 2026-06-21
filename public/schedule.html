@@ -377,7 +377,6 @@
       </select>
       <select id="statusFilter">
         <option value="">所有状态</option>
-        <option value="待排产">待排产</option>
         <option value="待分配">待分配</option>
         <option value="已分配">已分配</option>
         <option value="生产中">生产中</option>
@@ -644,30 +643,34 @@
         </div>
       `;
 
-      // 获取分配方案
+      // 获取分配方案（预览，不保存）
       try {
-        const response = await authFetch('/api/agent/assign', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId: currentOrder.id,
-            orderNo: currentOrder.order_no,
-            customer: currentOrder.customer,
-            processType: currentOrder.process_type,
-            material: currentOrder.material,
-            sheetSpec: currentOrder.sheet_size,
-            sheetQty: currentOrder.sheet_qty,
-            priority: currentOrder.priority
-          })
-        });
+        const response = await authFetch('/api/agent/workflow/' + encodeURIComponent(currentOrder.process_type));
+        const workflow = await response.json();
 
-        const result = await response.json();
-
-        if (result.success) {
-          currentAssignments = result.assignments;
-          renderWorkflow(result);
+        if (Array.isArray(workflow)) {
+          const assignments = workflow.map((step, index) => ({
+            step_order: index + 1,
+            step_name: step.step,
+            worker: step.worker,
+            machine: step.machine,
+            casual_workers: step.casual_workers,
+            estimated_time: step.estimated_time || 0
+          }));
+          currentAssignments = assignments;
+          const totalCasualWorkers = assignments.reduce((max, a) => {
+            const num = parseInt(a.casual_workers) || 0;
+            return num > max ? num : max;
+          }, 0);
+          const totalEstimatedTime = assignments.reduce((sum, a) => sum + (a.estimated_time || 0), 0);
+          renderWorkflow({
+            assignments,
+            total_steps: assignments.length,
+            total_casual_workers: totalCasualWorkers,
+            total_estimated_time: totalEstimatedTime
+          });
         } else {
-          alert('获取分配方案失败: ' + result.error);
+          alert('获取分配方案失败');
         }
       } catch (error) {
         alert('获取分配方案失败: ' + error.message);
@@ -719,10 +722,34 @@
       if (!currentOrder) return;
       if (!confirm(`确定要分配订单 ${currentOrder.order_no} 给师傅吗？`)) return;
 
-      // 分配已经在 openAssignModal 时完成了（API 已保存），这里只需要刷新
-      alert('分配成功！');
-      closeModal();
-      loadAllData();
+      try {
+        const response = await authFetch('/api/agent/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: currentOrder.id,
+            orderNo: currentOrder.order_no,
+            customer: currentOrder.customer,
+            processType: currentOrder.process_type,
+            material: currentOrder.material,
+            sheetSpec: currentOrder.sheet_size,
+            sheetQty: currentOrder.sheet_qty,
+            priority: currentOrder.priority
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          alert('分配成功！');
+          closeModal();
+          loadAllData();
+        } else {
+          alert('分配失败: ' + result.error);
+        }
+      } catch (error) {
+        alert('分配失败: ' + error.message);
+      }
     }
 
     // 查看已分配订单

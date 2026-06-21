@@ -165,7 +165,7 @@
     function renderWorkerSelect() {
       const select = document.getElementById('workerSelect');
       select.innerHTML = '<option value="">请选择...</option>';
-      workers.forEach(w => {
+      workers.filter(w => w.role === '师傅').forEach(w => {
         select.innerHTML += `<option value="${w.id}">${w.name}</option>`;
       });
     }

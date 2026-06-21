@@ -721,7 +721,7 @@
       select.innerHTML = '<option value="">无（通用反馈）</option>';
       tasks.forEach(t => {
         if (t.status !== '已完成') {
-          select.innerHTML += `<option value="${t.id}">${t.order_no || '-'} - ${t.customer || '-'}</option>`;
+          select.innerHTML += `<option value="${t.order_id}">${t.order_no || '-'} - ${t.customer || '-'}</option>`;
         }
       });
 

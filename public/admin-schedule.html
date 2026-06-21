@@ -264,8 +264,8 @@
     }
 
     function updateStats() {
-      const pending = orders.filter(o => o.completed !== '完单').length;
-      const assigned = orders.filter(o => o.completed === '完单').length;
+      const pending = orders.filter(o => o.status === '待分配').length;
+      const assigned = orders.filter(o => o.status === '已完成').length;
       const totalHours = workload.reduce((sum, w) => sum + w.estimated_hours, 0);
 
       document.getElementById('pendingOrders').textContent = pending;
@@ -309,7 +309,7 @@
       if (!confirm('确定要批量分配所有未完成的订单吗？')) return;
 
       try {
-        const pendingOrders = orders.filter(o => o.completed !== '完单');
+        const pendingOrders = orders.filter(o => o.status === '待分配');
 
         const response = await fetch('/api/agent/batch-assign', {
           method: 'POST',

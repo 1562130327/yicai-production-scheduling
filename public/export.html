@@ -206,7 +206,8 @@
         if (format === 'csv') {
           downloadCSV(data, 'orders.csv', ['id', 'order_no', 'customer', 'process_type', 'material', 'sheet_size', 'sheet_qty', 'status']);
         } else {
-          downloadJSON(data, 'orders.json');
+          window.location.href = '/api/export';
+          return;
         }
       } catch (error) {
         alert('导出失败: ' + error.message);
