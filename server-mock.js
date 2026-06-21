@@ -476,7 +476,11 @@ if (hasDbConfig) {
   app.put('/api/feedbacks/:id', requireAuth, (req, res) => {
     const feedback = feedbacksData.find(f => f.id == req.params.id);
     if (!feedback) return res.status(404).json({ error: '反馈不存在' });
-    Object.assign(feedback, req.body);
+    // 白名单：只允许更新业务字段
+    const allowedFields = ['status', 'content', 'type'];
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) feedback[field] = req.body[field];
+    });
     res.json({ message: '更新成功' });
     dataStore.autoSave();
   });
@@ -745,10 +749,13 @@ if (hasDbConfig) {
       created_at: new Date().toISOString()
     }));
 
-    // 保存到统一数据模型（不清空数组引用，避免断开data-store内部引用）
-    const filtered = dataStore.assignments.filter(a => a.order_id !== orderId);
-    dataStore.assignments.length = 0;
-    dataStore.assignments.push(...filtered, ...newAssignments);
+    // 仅移除该订单旧分配，不影响其他订单（避免并发覆盖）
+    const oldIdx = dataStore.assignments.findIndex(a => a.order_id === orderId);
+    if (oldIdx !== -1) {
+      const oldCount = dataStore.assignments.filter(a => a.order_id === orderId).length;
+      dataStore.assignments.splice(oldIdx, oldCount);
+    }
+    dataStore.assignments.push(...newAssignments);
 
     // 更新订单状态：待分配 → 已分配
     const targetOrder = scheduleData.find(o => o.id === orderId);
@@ -1283,11 +1290,13 @@ if (hasDbConfig) {
 
   // 创建样板
   app.post('/api/samples', requireAuth, (req, res) => {
-    const sample = {
-      id: dataStore.generateId(),
-      ...req.body,
-      created_at: new Date().toISOString()
-    };
+    const { sample_no, customer, material, process_type, sheet_spec } = req.body;
+    if (!sample_no || !customer) {
+      return res.status(400).json({ error: '缺少必填字段: sample_no, customer' });
+    }
+    const allowedFields = ['sample_no','customer','material','process_type','sheet_spec','sheet_qty','slice_spec','slice_qty','punch_spec','punch_qty','priority','remark','status'];
+    const sample = { id: dataStore.generateId(), created_at: new Date().toISOString() };
+    allowedFields.forEach(f => { if (req.body[f] !== undefined) sample[f] = req.body[f]; });
     dataStore.samples.push(sample);
     dataStore.logOperation(null, '创建样板', 'sample', sample.id, { sample_no: sample.sample_no });
     res.json({ success: true, sample });
@@ -1298,7 +1307,9 @@ if (hasDbConfig) {
   app.put('/api/samples/:id', requireAuth, (req, res) => {
     const index = dataStore.samples.findIndex(s => s.id === req.params.id);
     if (index === -1) return res.status(404).json({ success: false, error: '样板不存在' });
-    dataStore.samples[index] = { ...dataStore.samples[index], ...req.body, updated_at: new Date().toISOString() };
+    const allowedFields = ['sample_no','customer','material','process_type','sheet_spec','sheet_qty','slice_spec','slice_qty','punch_spec','punch_qty','priority','remark','status'];
+    allowedFields.forEach(f => { if (req.body[f] !== undefined) dataStore.samples[index][f] = req.body[f]; });
+    dataStore.samples[index].updated_at = new Date().toISOString();
     res.json({ success: true, sample: dataStore.samples[index] });
     dataStore.autoSave();
   });
@@ -1357,12 +1368,11 @@ if (hasDbConfig) {
 
   // 创建客户
   app.post('/api/customers', requireAuth, (req, res) => {
-    const customer = {
-      id: dataStore.generateId(),
-      ...req.body,
-      order_count: 0,
-      created_at: new Date().toISOString()
-    };
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: '缺少必填字段: name' });
+    const allowedFields = ['name','contact','phone','level','payment_term','address','notes','remark'];
+    const customer = { id: dataStore.generateId(), order_count: 0, created_at: new Date().toISOString() };
+    allowedFields.forEach(f => { if (req.body[f] !== undefined) customer[f] = req.body[f]; });
     dataStore.customers.push(customer);
     dataStore.logOperation(null, '创建客户', 'customer', customer.id, { name: customer.name });
     res.json({ success: true, customer });
@@ -1373,7 +1383,9 @@ if (hasDbConfig) {
   app.put('/api/customers/:id', requireAuth, (req, res) => {
     const index = dataStore.customers.findIndex(c => c.id === req.params.id);
     if (index === -1) return res.status(404).json({ success: false, error: '客户不存在' });
-    dataStore.customers[index] = { ...dataStore.customers[index], ...req.body, updated_at: new Date().toISOString() };
+    const allowedFields = ['name','contact','phone','level','payment_term','address','notes','remark'];
+    allowedFields.forEach(f => { if (req.body[f] !== undefined) dataStore.customers[index][f] = req.body[f]; });
+    dataStore.customers[index].updated_at = new Date().toISOString();
     res.json({ success: true, customer: dataStore.customers[index] });
     dataStore.autoSave();
   });
