@@ -481,10 +481,11 @@
     }
 
     function updateStats() {
-      document.getElementById('pendingCount').textContent = tasks.filter(t => t.status === '待分配' || t.status === '已分配' || t.status === '待开始').length;
-      document.getElementById('inProgressCount').textContent = tasks.filter(t => t.status === '生产中').length;
+      document.getElementById('pendingCount').textContent = tasks.filter(t => t.status === '待开始').length;
+      document.getElementById('inProgressCount').textContent = tasks.filter(t => t.status === '进行中' || t.status === '暂停').length;
       document.getElementById('completedCount').textContent = tasks.filter(t => t.status === '已完成').length;
-      document.getElementById('casualCount').textContent = Math.floor(Math.random() * 5) + 1; // 模拟零工数
+      const casualTotal = tasks.filter(t => t.status === '进行中').reduce((sum, t) => sum + (t.casual_workers || 0), 0);
+      document.getElementById('casualCount').textContent = casualTotal || '-';
     }
 
     function switchTab(tab) {

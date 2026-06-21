@@ -779,28 +779,117 @@
     }
 
     // 表单提交
-    document.getElementById('orderForm').onsubmit = function(e) {
+    document.getElementById('orderForm').onsubmit = async function(e) {
       e.preventDefault();
-      alert('订单保存成功');
-      closeModal('orderModal');
+      const token = localStorage.getItem('authToken');
+      const orderData = {
+        orderNo: 'YC' + Date.now().toString(36).toUpperCase(),
+        customer: document.getElementById('orderCustomer').value,
+        processType: document.getElementById('orderProcessType').value,
+        priority: document.getElementById('orderPriority').value,
+        material: document.getElementById('orderMaterial').value,
+        sheetSpec: document.getElementById('orderSheetSpec').value,
+        sheetQty: document.getElementById('orderSheetQty').value,
+        dueDate: document.getElementById('orderDueDate').value,
+        remark: document.getElementById('orderRemark').value,
+        category: document.getElementById('orderProcessType').value.includes('片材') ? '片材类' : '冲型类'
+      };
+      try {
+        const response = await fetch('/api/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
+          body: JSON.stringify(orderData)
+        });
+        const result = await response.json();
+        if (result.success || result.id) {
+          alert('订单创建成功！');
+          closeModal('orderModal');
+          loadAllData();
+        } else {
+          alert('创建失败: ' + (result.error || '未知错误'));
+        }
+      } catch (error) {
+        alert('提交失败: ' + error.message);
+      }
     };
 
-    document.getElementById('workerForm').onsubmit = function(e) {
+    document.getElementById('workerForm').onsubmit = async function(e) {
       e.preventDefault();
-      alert('师傅添加成功');
-      closeModal('workerModal');
+      const token = localStorage.getItem('authToken');
+      const workerData = {
+        name: document.getElementById('workerName').value,
+        phone: document.getElementById('workerPhone').value,
+        specialty: document.getElementById('workerSpecialty').value
+      };
+      try {
+        const response = await fetch('/api/workers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
+          body: JSON.stringify(workerData)
+        });
+        const result = await response.json();
+        if (result.id) {
+          alert('师傅添加成功！');
+          closeModal('workerModal');
+          loadAllData();
+        } else {
+          alert('添加失败: ' + (result.error || '未知错误'));
+        }
+      } catch (error) {
+        alert('提交失败: ' + error.message);
+      }
     };
 
-    document.getElementById('machineForm').onsubmit = function(e) {
+    document.getElementById('machineForm').onsubmit = async function(e) {
       e.preventDefault();
-      alert('机器添加成功');
-      closeModal('machineModal');
+      const token = localStorage.getItem('authToken');
+      const machineData = {
+        name: document.getElementById('machineName').value,
+        worker_id: document.getElementById('machineWorker').value,
+        status: document.getElementById('machineStatus').value
+      };
+      try {
+        const response = await fetch('/api/machines', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
+          body: JSON.stringify(machineData)
+        });
+        const result = await response.json();
+        if (result.id || result.success) {
+          alert('机器添加成功！');
+          closeModal('machineModal');
+          loadAllData();
+        } else {
+          alert('添加失败: ' + (result.error || '未知错误'));
+        }
+      } catch (error) {
+        alert('提交失败: ' + error.message);
+      }
     };
 
-    document.getElementById('feedbackReplyForm').onsubmit = function(e) {
+    document.getElementById('feedbackReplyForm').onsubmit = async function(e) {
       e.preventDefault();
-      alert('反馈处理成功');
-      closeModal('feedbackDetailModal');
+      const token = localStorage.getItem('authToken');
+      const feedbackId = document.getElementById('replyFeedbackId').value;
+      const status = document.getElementById('replyStatus').value;
+      const reply = document.getElementById('replyContent').value;
+      try {
+        const response = await fetch('/api/feedbacks/' + feedbackId, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
+          body: JSON.stringify({ status, reply })
+        });
+        const result = await response.json();
+        if (result.message) {
+          alert('反馈处理成功');
+          closeModal('feedbackDetailModal');
+          loadAllData();
+        } else {
+          alert('处理失败: ' + (result.error || '未知错误'));
+        }
+      } catch (error) {
+        alert('提交失败: ' + error.message);
+      }
     };
 
     // 算料计算

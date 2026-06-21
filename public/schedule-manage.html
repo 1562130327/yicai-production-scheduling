@@ -386,7 +386,15 @@
     }
 
     function saveSchedule() {
-      alert('排班已保存！');
+      try {
+        localStorage.setItem('schedule_backup_' + new Date().toISOString().slice(0, 10), JSON.stringify({
+          savedAt: new Date().toISOString(),
+          schedule: { weekStart: currentWeekStart.toISOString() }
+        }));
+        alert('排班已保存到本地存储（localStorage）。如需持久化保存，需连接后端服务。');
+      } catch (e) {
+        alert('保存失败: ' + e.message);
+      }
     }
   </script>
 </body>

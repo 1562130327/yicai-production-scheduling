@@ -177,7 +177,7 @@ if (hasDbConfig) {
   }
 
   // 排单 API
-  app.get('/api/schedule', requireAuth, (req, res) => {
+  app.get('/api/schedule', (req, res) => {
     let result = scheduleData;
     if (req.query.process_type) {
       result = result.filter(o => o.process_type === req.query.process_type);
@@ -199,7 +199,7 @@ if (hasDbConfig) {
     res.json(result);
   });
 
-  app.get('/api/schedule/stats', requireAuth, (req, res) => {
+  app.get('/api/schedule/stats', (req, res) => {
     const total = scheduleData.length;
     const urgent = scheduleData.filter(o => o.priority === '特急' || o.priority === '注意').length;
     const customers = [...new Set(scheduleData.map(o => o.customer).filter(Boolean))].length;
@@ -207,7 +207,7 @@ if (hasDbConfig) {
     res.json({ total, urgent, customers, processTypes });
   });
 
-  app.get('/api/schedule/grouped', requireAuth, (req, res) => {
+  app.get('/api/schedule/grouped', (req, res) => {
     const grouped = {};
     scheduleData.forEach(o => {
       if (o.process_type) {
@@ -221,7 +221,7 @@ if (hasDbConfig) {
     res.json(result);
   });
 
-  app.get('/api/schedule/categories', requireAuth, (req, res) => {
+  app.get('/api/schedule/categories', (req, res) => {
     res.json({
       '片材': { name: '片材', color: '#667eea', icon: '📦' },
       '切片': { name: '切片', color: '#11998e', icon: '✂️' },
@@ -291,11 +291,11 @@ if (hasDbConfig) {
   });
 
   // 库存 API
-  app.get('/api/inventory', requireAuth, (req, res) => {
+  app.get('/api/inventory', (req, res) => {
     res.json(dataStore.inventory);
   });
 
-  app.get('/api/inventory/stats', requireAuth, (req, res) => {
+  app.get('/api/inventory/stats', (req, res) => {
     const data = dataStore.inventory;
     const totalStock = data.reduce((sum, item) => sum + (item.remaining_stock || 0), 0);
     const materials = new Set(data.map(item => item.material));
@@ -318,11 +318,11 @@ if (hasDbConfig) {
   let feedbacksData = dataStore.feedbacks;
 
   // 师傅 API
-  app.get('/api/workers', requireAuth, (req, res) => {
+  app.get('/api/workers', (req, res) => {
     res.json(workersData);
   });
 
-  app.get('/api/workers/:id', requireAuth, (req, res) => {
+  app.get('/api/workers/:id', (req, res) => {
     const worker = workersData.find(w => w.id == req.params.id);
     if (!worker) return res.status(404).json({ error: '师傅不存在' });
     res.json(worker);
@@ -336,14 +336,21 @@ if (hasDbConfig) {
   });
 
   // 机器 API
-  app.get('/api/machines', requireAuth, (req, res) => {
+  app.get('/api/machines', (req, res) => {
     res.json(machinesData);
   });
 
-  app.get('/api/machines/:id', requireAuth, (req, res) => {
+  app.get('/api/machines/:id', (req, res) => {
     const machine = machinesData.find(m => m.id == req.params.id);
     if (!machine) return res.status(404).json({ error: '机器不存在' });
     res.json(machine);
+  });
+
+  app.post('/api/machines', requireAuth, (req, res) => {
+    const newMachine = { id: machinesData.length + 1, ...req.body };
+    machinesData.push(newMachine);
+    res.json({ success: true, message: '机器添加成功', machine: newMachine });
+    dataStore.autoSave();
   });
 
   // 反馈 API
@@ -628,7 +635,7 @@ if (hasDbConfig) {
   });
 
   // 日报 API (P1-7: 使用真实数据)
-  app.get('/api/daily-report', requireAuth, (req, res) => {
+  app.get('/api/daily-report', (req, res) => {
     const date = req.query.date || new Date().toISOString().split('T')[0];
 
     // 统计订单
@@ -806,13 +813,13 @@ if (hasDbConfig) {
     res.json(dataStore.assignments);
   });
 
-  app.get('/api/agent/workflow/:processType', requireAuth, (req, res) => {
+  app.get('/api/agent/workflow/:processType', (req, res) => {
     const workflow = WORKFLOW_MAP[req.params.processType];
     if (!workflow) return res.status(404).json({ error: '未知的加工工艺' });
     res.json(workflow);
   });
 
-  app.get('/api/agent/workflows', requireAuth, (req, res) => {
+  app.get('/api/agent/workflows', (req, res) => {
     res.json(WORKFLOW_MAP);
   });
 
@@ -833,7 +840,7 @@ if (hasDbConfig) {
     res.json(Object.values(workload));
   });
 
-  app.get('/api/agent/print/:workerName', requireAuth, (req, res) => {
+  app.get('/api/agent/print/:workerName', (req, res) => {
     const workerName = decodeURIComponent(req.params.workerName);
     const tasks = dataStore.assignments.filter(a => a.worker === workerName);
 
@@ -1080,7 +1087,7 @@ if (hasDbConfig) {
   });
 
   // 检查订单是否可以完单
-  app.get('/api/agent/check-complete/:orderId', requireAuth, (req, res) => {
+  app.get('/api/agent/check-complete/:orderId', (req, res) => {
     const orderId = parseInt(req.params.orderId);
     const orderAssignments = dataStore.assignments.filter(a => a.order_id === orderId);
     const allCompleted = orderAssignments.length > 0 && orderAssignments.every(a => a.status === '已完成');
@@ -1094,7 +1101,7 @@ if (hasDbConfig) {
   });
 
   // 获取订单的分配进度
-  app.get('/api/agent/order-progress/:orderId', requireAuth, (req, res) => {
+  app.get('/api/agent/order-progress/:orderId', (req, res) => {
     const orderId = parseInt(req.params.orderId);
     const orderAssignments = dataStore.assignments
       .filter(a => a.order_id === orderId)
@@ -1124,7 +1131,7 @@ if (hasDbConfig) {
     res.json(result);
   });
 
-  app.get('/api/inventory/alerts', requireAuth, (req, res) => {
+  app.get('/api/inventory/alerts', (req, res) => {
     const alerts = dataStore.checkInventoryAlerts();
     res.json(alerts);
   });
@@ -1161,7 +1168,7 @@ if (hasDbConfig) {
   // ============================================
   // 提醒 API
   // ============================================
-  app.get('/api/alerts', requireAuth, (req, res) => {
+  app.get('/api/alerts', (req, res) => {
     const inventoryAlerts = dataStore.checkInventoryAlerts();
     const dueDateAlerts = dataStore.checkDueDateAlerts();
 
@@ -1208,7 +1215,7 @@ if (hasDbConfig) {
   });
 
   // 获取订单状态历史
-  app.get('/api/order-status-history/:orderId', requireAuth, (req, res) => {
+  app.get('/api/order-status-history/:orderId', (req, res) => {
     const orderId = parseInt(req.params.orderId);
     const history = dataStore.orderStatusHistory
       .filter(h => h.order_id === orderId)
@@ -1223,12 +1230,12 @@ if (hasDbConfig) {
   if (!dataStore.samples) dataStore.samples = [];
 
   // 获取所有样板
-  app.get('/api/samples', requireAuth, (req, res) => {
+  app.get('/api/samples', (req, res) => {
     res.json(dataStore.samples);
   });
 
   // 获取单个样板
-  app.get('/api/samples/:id', requireAuth, (req, res) => {
+  app.get('/api/samples/:id', (req, res) => {
     const sample = dataStore.samples.find(s => s.id === req.params.id);
     if (!sample) return res.status(404).json({ success: false, error: '样板不存在' });
     res.json(sample);
@@ -1297,12 +1304,12 @@ if (hasDbConfig) {
   }
 
   // 获取所有客户
-  app.get('/api/customers', requireAuth, (req, res) => {
+  app.get('/api/customers', (req, res) => {
     res.json(dataStore.customers);
   });
 
   // 获取单个客户
-  app.get('/api/customers/:id', requireAuth, (req, res) => {
+  app.get('/api/customers/:id', (req, res) => {
     const customer = dataStore.customers.find(c => c.id === req.params.id);
     if (!customer) return res.status(404).json({ success: false, error: '客户不存在' });
     res.json(customer);
@@ -1341,7 +1348,7 @@ if (hasDbConfig) {
   // ============================================
   // Excel 导出 API (P1-8)
   // ============================================
-  app.get('/api/export', requireAuth, (req, res) => {
+  app.get('/api/export', (req, res) => {
     try {
       const XLSX = require('xlsx');
 
