@@ -286,8 +286,9 @@
       <a href="schedule.html" class="btn btn-secondary">排单总表</a>
       <a href="inventory.html" class="btn btn-secondary">库存管理</a>
       <a href="new-order.html" class="btn btn-primary">+ 新增订单</a>
-      <a href="login.html" class="btn btn-secondary">登录</a>
-      <a href="admin.html" class="btn btn-secondary">管理后台</a>
+      <a href="merchandiser-dashboard.html" id="workerLink" class="btn btn-secondary" style="display:none;">跟单工作台</a>
+      <a href="login.html" id="loginLink" class="btn btn-secondary">登录</a>
+      <a href="admin.html" id="adminLink" class="btn btn-secondary" style="display:none;">管理后台</a>
     </div>
   </nav>
 
@@ -336,6 +337,25 @@
     let currentCustomer = '';
 
     document.addEventListener('DOMContentLoaded', function() {
+      const userStr = localStorage.getItem('currentUser');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        document.getElementById('loginLink').textContent = '退出';
+        document.getElementById('loginLink').href = '#';
+        document.getElementById('loginLink').onclick = function(e) {
+          e.preventDefault();
+          localStorage.removeItem('currentUser');
+          localStorage.removeItem('authToken');
+          window.location.href = 'index.html';
+        };
+        // Show role-specific buttons
+        if (user.role === '管理员') {
+          document.getElementById('adminLink').style.display = 'inline-flex';
+        }
+        if (user.role === '师傅') {
+          document.getElementById('workerLink').style.display = 'inline-flex';
+        }
+      }
       loadOrders();
     });
 

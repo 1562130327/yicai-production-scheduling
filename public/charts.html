@@ -119,6 +119,11 @@
     let assignments = [];
 
     document.addEventListener('DOMContentLoaded', function() {
+      const userStr = localStorage.getItem('currentUser');
+      if (!userStr) {
+        window.location.href = 'login.html';
+        return;
+      }
       loadData();
     });
 

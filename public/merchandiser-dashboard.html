@@ -276,9 +276,9 @@
         const allOrders = await ordersRes.json();
         const allFeedbacks = await feedbacksRes.json();
 
-        // 筛选当前跟单员的订单（简化：显示所有订单）
+        // 显示所有订单和反馈（未来可根据跟单员ID筛选）
         myOrders = allOrders;
-        myFeedbacks = allFeedbacks.filter(f => f.from_worker_name === currentUser.name);
+        myFeedbacks = allFeedbacks;
 
         updateStats();
         renderOrders();

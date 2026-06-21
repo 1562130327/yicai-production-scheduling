@@ -472,6 +472,29 @@
               <label>交货日期</label>
               <input type="date" id="orderDueDate">
             </div>
+            <div class="form-group">
+              <label>产品型号</label>
+              <input type="text" id="orderStyleNo" placeholder="如：EVA-001">
+            </div>
+            <div class="form-group">
+              <label>类别</label>
+              <select id="orderCategory">
+                <option value="">选择类别</option>
+                <option value="片材类">片材类</option>
+                <option value="冲型类">冲型类</option>
+                <option value="切片类">切片类</option>
+                <option value="背胶类">背胶类</option>
+                <option value="贴布类">贴布类</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>切片尺寸</label>
+              <input type="text" id="orderSliceSpec" placeholder="如：100*200mm">
+            </div>
+            <div class="form-group">
+              <label>切片数量</label>
+              <input type="text" id="orderSliceQty" placeholder="如：500片">
+            </div>
           </div>
           <div class="form-group">
             <label>备注</label>
@@ -848,7 +871,7 @@
       e.preventDefault();
       const token = localStorage.getItem('authToken');
       const orderData = {
-        orderNo: 'YC' + Date.now().toString(36).toUpperCase(),
+        orderNo: document.getElementById('orderNo').value || 'YC' + Date.now().toString(36).toUpperCase(),
         customer: document.getElementById('orderCustomer').value,
         processType: document.getElementById('orderProcessType').value,
         priority: document.getElementById('orderPriority').value,
@@ -857,7 +880,10 @@
         sheetQty: document.getElementById('orderSheetQty').value,
         dueDate: document.getElementById('orderDueDate').value,
         remark: document.getElementById('orderRemark').value,
-        category: document.getElementById('orderProcessType').value.includes('片材') ? '片材类' : '冲型类'
+        category: document.getElementById('orderCategory').value || (document.getElementById('orderProcessType').value.includes('片材') ? '片材类' : '冲型类'),
+        styleNo: document.getElementById('orderStyleNo').value,
+        sliceSpec: document.getElementById('orderSliceSpec').value,
+        sliceQty: document.getElementById('orderSliceQty').value
       };
       try {
         const response = await fetch('/api/schedule', {

@@ -197,8 +197,8 @@
       const tbody = document.getElementById('checkTable');
 
       tbody.innerHTML = inventory.map(item => {
-        const systemQty = item.remaining_stock || 0;
-        const actualQty = checkData[item.id] !== undefined ? checkData[item.id] : '';
+        const systemQty = parseFloat(item.remaining_stock) || 0;
+        const actualQty = checkData[item.id] !== undefined ? (parseFloat(checkData[item.id]) || 0) : '';
         const diff = actualQty !== '' ? actualQty - systemQty : 0;
 
         let status = '正常';
@@ -220,7 +220,7 @@
                 onchange="updateCheck(${item.id}, this.value)">
             </td>
             <td class="${diff > 0 ? 'diff-positive' : diff < 0 ? 'diff-negative' : 'diff-zero'}">
-              ${actualQty !== '' ? (diff >= 0 ? '+' : '') + diff.toFixed(1) : '-'}
+              ${actualQty !== '' ? (diff >= 0 ? '+' : '') + (diff || 0).toFixed(1) : '-'}
             </td>
             <td><span class="tag ${statusClass}">${status}</span></td>
           </tr>
@@ -241,7 +241,7 @@
 
       inventory.forEach(item => {
         if (checkData[item.id] !== undefined) {
-          const diff = checkData[item.id] - (item.remaining_stock || 0);
+          const diff = (parseFloat(checkData[item.id]) || 0) - (parseFloat(item.remaining_stock) || 0);
           if (diff === 0) normalCount++;
           else if (diff > 0) surplusCount++;
           else shortageCount++;

@@ -225,6 +225,11 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      const userStr = localStorage.getItem('currentUser');
+      if (!userStr) {
+        window.location.href = 'login.html';
+        return;
+      }
       // 设置默认日期为今天
       document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
       loadReport();

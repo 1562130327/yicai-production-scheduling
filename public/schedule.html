@@ -806,6 +806,10 @@
 
       const newCustomer = prompt('客户:', order.customer || '');
       if (newCustomer === null) return;
+      const newProcessType = prompt('加工工艺:', order.process_type || '');
+      if (newProcessType === null) return;
+      const newMaterial = prompt('用料:', order.material || '');
+      if (newMaterial === null) return;
       const newPriority = prompt('优先级 (普通/注意/特急):', order.priority || '普通');
       if (newPriority === null) return;
       const newRemark = prompt('备注:', order.remark || '');
@@ -818,6 +822,8 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           customer: newCustomer,
+          process_type: newProcessType,
+          material: newMaterial,
           priority: newPriority,
           remark: newRemark,
           due_date: newDueDate
