@@ -461,7 +461,15 @@
     let currentAssignments = [];
 
     document.addEventListener('DOMContentLoaded', function() {
-      loadAllData();
+      loadAllData().then(() => {
+        // 处理 ?edit=xxx 参数（从 admin/merchandiser 页面跳转过来）
+        const params = new URLSearchParams(window.location.search);
+        const editId = params.get('edit');
+        if (editId) {
+          const order = allData.find(o => o.id === parseInt(editId));
+          if (order) editOrder(order.id);
+        }
+      });
     });
 
     async function loadAllData() {

@@ -682,8 +682,8 @@
           <td><span class="tag tag-${o.priority || '普通'}">${o.priority || '普通'}</span></td>
           <td>${o.status || '-'}</td>
           <td>
-            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">编辑</button>
-            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">删除</button>
+            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;" onclick="editOrder(${o.id})">编辑</button>
+            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteOrder(${o.id})">删除</button>
           </td>
         </tr>
       `).join('');
@@ -697,8 +697,8 @@
           <td>${w.phone || '-'}</td>
           <td>${w.specialty || '-'}</td>
           <td>
-            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">编辑</button>
-            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">删除</button>
+            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;" onclick="editWorker(${w.id}, '${w.name}', '${w.phone || ''}', '${w.specialty || ''}')">编辑</button>
+            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteWorker(${w.id})">删除</button>
           </td>
         </tr>
       `).join('');
@@ -712,8 +712,8 @@
           <td>${m.worker_name || '-'}</td>
           <td>${m.status || '-'}</td>
           <td>
-            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;">编辑</button>
-            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">删除</button>
+            <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;" onclick="editMachine(${m.id}, '${m.name}', '${m.status || '正常'}')">编辑</button>
+            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteMachine(${m.id})">删除</button>
           </td>
         </tr>
       `).join('');
@@ -776,6 +776,71 @@
 
     function closeModal(id) {
       document.getElementById(id).classList.remove('active');
+    }
+
+    // 订单编辑/删除
+    function editOrder(id) {
+      window.location.href = 'schedule.html?edit=' + id;
+    }
+
+    async function deleteOrder(id) {
+      if (!confirm('确定要取消该订单吗？（软删除，可恢复）')) return;
+      const token = localStorage.getItem('authToken');
+      try {
+        const res = await fetch('/api/schedule/' + id, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
+          body: JSON.stringify({ userId: currentUser ? currentUser.id : null })
+        });
+        const result = await res.json();
+        if (result.success) { alert('订单已取消'); loadAllData(); }
+        else { alert('操作失败: ' + (result.error || '未知错误')); }
+      } catch (e) { alert('操作失败: ' + e.message); }
+    }
+
+    // 师傅编辑/删除
+    function editWorker(id, name, phone, specialty) {
+      const newName = prompt('师傅姓名:', name);
+      if (!newName) return;
+      const newPhone = prompt('电话:', phone);
+      const newSpecialty = prompt('专长:', specialty);
+      // 更新本地数据（持久化会在下次save时生效）
+      const idx = workers.findIndex(w => w.id === id);
+      if (idx >= 0) {
+        workers[idx].name = newName;
+        workers[idx].phone = newPhone || '';
+        workers[idx].specialty = newSpecialty || '';
+        alert('师傅信息已更新');
+        renderWorkersTable();
+      }
+    }
+
+    async function deleteWorker(id) {
+      if (!confirm('确定要删除该师傅吗？')) return;
+      workers = workers.filter(w => w.id !== id);
+      alert('师傅已删除');
+      renderWorkersTable();
+    }
+
+    // 机器编辑/删除
+    function editMachine(id, name, status) {
+      const newName = prompt('机器名称:', name);
+      if (!newName) return;
+      const newStatus = prompt('状态（正常/维修中/闲置）:', status);
+      const idx = machines.findIndex(m => m.id === id);
+      if (idx >= 0) {
+        machines[idx].name = newName;
+        machines[idx].status = newStatus || '正常';
+        alert('机器信息已更新');
+        renderMachinesTable();
+      }
+    }
+
+    async function deleteMachine(id) {
+      if (!confirm('确定要删除该机器吗？')) return;
+      machines = machines.filter(m => m.id !== id);
+      alert('机器已删除');
+      renderMachinesTable();
     }
 
     // 表单提交
