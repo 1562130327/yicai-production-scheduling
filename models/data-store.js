@@ -374,7 +374,7 @@ function logOperation(userId, action, targetType, targetId, details = {}) {
     details: details,
     created_at: new Date().toISOString()
   });
-  autoSave();
+  // autoSave 由 API handler 统一在最后调用，避免双重写盘
 }
 
 // 校验状态流转是否合法
@@ -574,7 +574,8 @@ function checkDueDateAlerts() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  orders.forEach(order => {
+  const orderList = scheduleDataRef || orders;
+  orderList.forEach(order => {
     if (order.due_date && order.completed !== '完单') {
       const dueDate = new Date(order.due_date);
       if (dueDate < today) {

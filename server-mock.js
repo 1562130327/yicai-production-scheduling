@@ -18,6 +18,32 @@ app.use(express.static(path.join(__dirname, 'public')));
 // 权限系统 (P0-3)
 // ============================================
 const sessions = new Map();
+const SESSION_TTL = 24 * 60 * 60 * 1000; // 24小时过期
+
+// 合法用户白名单
+const VALID_USERS = [
+  { name: '潘光龙', role: '管理员' },
+  { name: '潘朝森', role: '管理员' },
+  { name: '罗巧芳', role: '跟单员' },
+  { name: '曾小芳', role: '跟单员' },
+  { name: '彭鸿媛', role: '跟单员' },
+  { name: '郑思远', role: '师傅' },
+  { name: '伍乾进', role: '师傅' },
+  { name: '莫齐国', role: '师傅' },
+  { name: '李乐', role: '师傅' },
+  { name: '周忠琼', role: '师傅' },
+  { name: '简翠花', role: '师傅' },
+  { name: '杨合进', role: '师傅' }
+];
+
+// 定时清理过期 session
+function cleanExpiredSessions() {
+  const now = Date.now();
+  for (const [token, session] of sessions) {
+    if (now - session.loginTimeMs > SESSION_TTL) sessions.delete(token);
+  }
+}
+setInterval(cleanExpiredSessions, 60 * 60 * 1000);
 
 function generateToken() {
   return crypto.randomBytes(32).toString('hex');
@@ -28,7 +54,12 @@ function requireAuth(req, res, next) {
   if (!token || !sessions.has(token)) {
     return res.status(401).json({ error: '未登录' });
   }
-  req.currentUser = sessions.get(token);
+  const session = sessions.get(token);
+  if (Date.now() - session.loginTimeMs > SESSION_TTL) {
+    sessions.delete(token);
+    return res.status(401).json({ error: '登录已过期，请重新登录' });
+  }
+  req.currentUser = session;
   next();
 }
 
@@ -50,8 +81,12 @@ app.post('/api/login', (req, res) => {
   if (!name || !role) {
     return res.status(400).json({ error: '缺少姓名或角色' });
   }
+  const validUser = VALID_USERS.find(u => u.name === name && u.role === role);
+  if (!validUser) {
+    return res.status(401).json({ error: '用户名或角色不正确' });
+  }
   const token = generateToken();
-  sessions.set(token, { name, role, loginTime: new Date().toISOString() });
+  sessions.set(token, { name, role, loginTime: new Date().toISOString(), loginTimeMs: Date.now() });
   res.json({ success: true, token, user: { name, role } });
 });
 
@@ -753,6 +788,13 @@ if (hasDbConfig) {
 
   app.post('/api/agent/batch-assign', requireAuth, requireRole('管理员'), (req, res) => {
     const { orders } = req.body;
+
+    // 先统一移除所有待分配订单的旧分配（只清一次）
+    const orderIds = orders.map(o => o.id);
+    const existingFiltered = dataStore.assignments.filter(a => !orderIds.includes(a.order_id));
+    dataStore.assignments.length = 0;
+    dataStore.assignments.push(...existingFiltered);
+
     const results = orders.map(order => {
       const workflow = WORKFLOW_MAP[order.process_type] || [];
       const quantity = parseInt(order.sheet_qty) || 0;
@@ -767,10 +809,8 @@ if (hasDbConfig) {
         created_at: new Date().toISOString()
       }));
 
-      // 保存到统一数据模型（不清空数组引用，避免断开data-store内部引用）
-      const filtered = dataStore.assignments.filter(a => a.order_id !== order.id);
-      dataStore.assignments.length = 0;
-      dataStore.assignments.push(...filtered, ...newAssignments);
+      // 追加新分配，不再清空数组
+      dataStore.assignments.push(...newAssignments);
 
       // 更新订单状态：待分配 → 已分配
       const targetOrder = scheduleData.find(o => o.id === order.id);
